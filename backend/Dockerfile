@@ -25,13 +25,19 @@ FROM node:20-alpine
 # Install runtime dependencies and useful shell tools
 RUN apk add --no-cache \
     python3 make g++ \
-    zsh \
+    zsh zsh-autosuggestions zsh-syntax-highlighting \
+    bash bash-completion \
     git \
-    curl \
-    vim \
-    nano \
-    htop \
+    curl wget \
+    vim nano \
+    htop ncdu \
     ncurses \
+    tree \
+    less \
+    grep \
+    sed \
+    tar \
+    jq \
     && rm -rf /var/cache/apk/*
 
 # Set production environment
@@ -48,6 +54,17 @@ RUN npm ci --omit=dev && \
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
+
+# Copy shell configuration files
+COPY .zshrc.docker /home/node/.zshrc
+COPY .bashrc.docker /home/node/.bashrc
+
+# Set up shell environment for node user
+RUN chown node:node /home/node/.zshrc /home/node/.bashrc && \
+    chmod 644 /home/node/.zshrc /home/node/.bashrc
+
+# Set default shell to zsh for node user
+ENV SHELL=/bin/zsh
 
 # Run as non-root user
 USER node

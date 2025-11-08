@@ -2,9 +2,16 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import config from './config/config.js';
 import ptyManager from './services/ptyManager.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
+import authRoutes from './routes/auth.routes.js';
+import {
+  initializeDefaultUser,
+  verifyToken,
+  cleanupExpiredSessions,
+} from './services/authService.js';
 import { WebSocketMessage, WebSocketResponse } from './types/index.js';
 import { randomUUID } from 'crypto';
 
@@ -12,14 +19,23 @@ const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
+// Initialize default user if auth is enabled
+if (config.authEnabled) {
+  initializeDefaultUser();
+}
+
 // Middleware
 app.use(cors({ origin: config.corsOrigins, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
+
+// Auth routes
+app.use('/api/auth', authRoutes);
 
 // API routes with auth
 app.get('/api/sessions', authMiddleware, (req, res) => {
@@ -29,23 +45,39 @@ app.get('/api/sessions', authMiddleware, (req, res) => {
       sessionId: s.sessionId,
       createdAt: s.createdAt,
       lastActivity: s.lastActivity,
+      expiresAt: s.expiresAt,
     })),
   });
 });
 
 // WebSocket connection handling
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req) => {
   let userId: string;
   let sessionId: string;
 
-  // Dev mode: Auto-assign user
+  // Extract and verify token
   if (!config.authEnabled) {
+    // Dev mode: Auto-assign user
     userId = 'dev-user';
     console.log(`[WebSocket] Connection from dev user`);
   } else {
-    // Production mode: JWT validation will be added in Phase 6
-    ws.close(1008, 'Authentication required');
-    return;
+    // Production mode: Verify JWT
+    const token = extractTokenFromRequest(req);
+
+    if (!token) {
+      ws.close(1008, 'Authentication required');
+      return;
+    }
+
+    const user = verifyToken(token);
+
+    if (!user) {
+      ws.close(1008, 'Invalid or expired token');
+      return;
+    }
+
+    userId = user.userId;
+    console.log(`[WebSocket] Connection from user: ${userId}`);
   }
 
   // Check session limit
@@ -136,9 +168,41 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
+// Helper function to extract token from WebSocket request
+function extractTokenFromRequest(req: any): string | null {
+  // Try to get from cookie header
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';').reduce((acc: any, cookie: string) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {});
+
+    if (cookies.auth_token) {
+      return cookies.auth_token;
+    }
+  }
+
+  // Try to get from authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  // Try to get from query parameter (fallback for WebSocket)
+  const url = new URL(req.url || '', `http://${req.headers.host}`);
+  const token = url.searchParams.get('token');
+
+  return token;
+}
+
 // Cleanup idle sessions every 5 minutes
 setInterval(() => {
   ptyManager.cleanupIdleSessions();
+  if (config.authEnabled) {
+    cleanupExpiredSessions();
+  }
 }, 5 * 60 * 1000);
 
 // Start server
@@ -149,8 +213,9 @@ server.listen(config.port, () => {
 ╠═══════════════════════════════════════════════════════╣
 ║  Port:        ${config.port}                                    ║
 ║  Environment: ${config.nodeEnv}                      ║
-║  Auth:        ${config.authEnabled ? 'Enabled (OAuth)' : 'Disabled (Dev Mode)'}  ║
+║  Auth:        ${config.authEnabled ? 'Enabled (Password)' : 'Disabled (Dev Mode)'}  ║
 ║  CORS:        ${config.corsOrigins.join(', ')}      ║
+║  Session:     ${config.sessionExpiry}                               ║
 ╚═══════════════════════════════════════════════════════╝
   `);
 });

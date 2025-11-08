@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { WindowManager } from './components/WindowManager';
+import { Login } from './components/Login';
 import './App.css';
 
 // Construct WebSocket URL dynamically based on current host
@@ -13,12 +15,104 @@ const getWebSocketUrl = (): string => {
 
 const WS_URL = getWebSocketUrl();
 
+// Check if authentication is enabled
+const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
+
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check authentication status on mount
+    const checkAuth = async () => {
+      if (!AUTH_ENABLED) {
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3366';
+        const response = await fetch(`${apiUrl}/api/auth/verify`, {
+          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3366';
+      await fetch(`${apiUrl}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      setIsAuthenticated(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (AUTH_ENABLED && !isAuthenticated) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🖥️ Web Shell</h1>
-        <p>Browser-based Terminal - Multi-Window</p>
+        <div>
+          <h1>🖥️ Web Shell</h1>
+          <p>Browser-based Terminal - Multi-Window</p>
+        </div>
+        {AUTH_ENABLED && (
+          <button className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        )}
       </header>
       <main className="app-main">
         <WindowManager wsUrl={WS_URL} />

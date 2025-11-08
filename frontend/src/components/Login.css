@@ -1,0 +1,134 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 20px;
+}
+
+.login-box {
+  background: #0f1419;
+  border: 1px solid #2a2a3e;
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-header h1 {
+  color: #61dafb;
+  font-size: 2rem;
+  margin: 0 0 8px 0;
+}
+
+.login-header p {
+  color: #8b92a8;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: #e1e8ed;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  background: #1a1f2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #e1e8ed;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #61dafb;
+  box-shadow: 0 0 0 3px rgba(97, 218, 251, 0.1);
+}
+
+.form-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-group input::placeholder {
+  color: #5a5a6e;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #ef4444;
+  font-size: 0.9rem;
+}
+
+.login-button {
+  background: #61dafb;
+  color: #0f1419;
+  border: none;
+  border-radius: 6px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-button:hover:not(:disabled) {
+  background: #4fc3f7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(97, 218, 251, 0.3);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-info {
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid #2a2a3e;
+}
+
+.login-info p {
+  color: #8b92a8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.login-info code {
+  background: #1a1f2e;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #61dafb;
+  font-family: 'Monaco', 'Courier New', monospace;
+}

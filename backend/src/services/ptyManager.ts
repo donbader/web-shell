@@ -45,6 +45,7 @@ class PTYManager {
       rows,
       createdAt: Date.now(),
       lastActivity: Date.now(),
+      expiresAt: Date.now() + (config.idleTimeoutMinutes * 60 * 1000),
     };
 
     this.sessions.set(sessionId, session);

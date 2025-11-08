@@ -9,6 +9,7 @@ export interface Session {
   userId: string;
   createdAt: number;
   lastActivity: number;
+  expiresAt: number;
 }
 
 export interface TerminalSession extends Session {
@@ -30,4 +31,17 @@ export interface WebSocketResponse {
   sessionId?: string;
   data?: string;
   error?: string;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface AuthTokenPayload {
+  userId: string;
+  email: string;
+  name: string;
+  iat: number;
+  exp: number;
 }

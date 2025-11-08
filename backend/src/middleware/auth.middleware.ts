@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../types/index.js';
 import config from '../config/config.js';
+import { verifyToken } from '../services/authService.js';
 
 // Extend Express Request to include user
 declare global {
@@ -22,7 +23,21 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     return next();
   }
 
-  // Production mode: JWT validation will be implemented in Phase 6
-  // For now, reject requests in production mode
-  res.status(401).json({ error: 'Authentication required' });
+  // Production mode: Verify JWT token
+  const token = req.cookies?.auth_token || req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  const user = verifyToken(token);
+
+  if (!user) {
+    res.status(401).json({ error: 'Invalid or expired token' });
+    return;
+  }
+
+  req.user = user;
+  next();
 }

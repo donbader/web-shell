@@ -9,6 +9,7 @@ interface Config {
   sessionExpiry: string;
   maxSessionsPerUser: number;
   idleTimeoutMinutes: number;
+  jwtSecret: string;
 }
 
 const config: Config = {
@@ -19,6 +20,7 @@ const config: Config = {
   sessionExpiry: process.env.SESSION_EXPIRY || '24h',
   maxSessionsPerUser: parseInt(process.env.MAX_SESSIONS_PER_USER || '5', 10),
   idleTimeoutMinutes: parseInt(process.env.IDLE_TIMEOUT_MINUTES || '30', 10),
+  jwtSecret: process.env.JWT_SECRET || 'development-secret-key-change-in-production',
 };
 
 export default config;

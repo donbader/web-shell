@@ -1,0 +1,67 @@
+# Docker Container ZSH Configuration
+# Minimal but functional shell environment for web-shell container
+
+# Basic environment
+export TERM=xterm-256color
+export EDITOR=vim
+export VISUAL=vim
+
+# Enhanced completion
+autoload -Uz compinit
+compinit
+
+# History settings
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt SHARE_HISTORY
+
+# Enhanced directory navigation
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+
+# Aliases - navigation
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+alias -- -="cd -"
+
+# Aliases - enhanced ls
+alias ls='ls --color=auto'
+alias ll='ls -lh'
+alias la='ls -lAh'
+alias l='ls -CF'
+
+# Aliases - common shortcuts
+alias grep='grep --color=auto'
+alias h='history'
+alias c='clear'
+alias reload='source ~/.zshrc'
+
+# Aliases - docker/container specific
+alias psa='ps aux'
+alias df='df -h'
+alias du='du -h'
+alias free='free -h'
+
+# Prompt - simple but informative
+# Shows: user@host:path $
+PROMPT='%F{green}%n@%m%f:%F{blue}%~%f$ '
+
+# Additional useful settings
+setopt CORRECT                 # Command correction
+setopt NO_BEEP                # No beep on error
+setopt INTERACTIVE_COMMENTS   # Allow comments in interactive mode
+
+# Node/npm environment (container-specific)
+export NODE_ENV=production
+export NPM_CONFIG_LOGLEVEL=warn
+
+# Welcome message
+echo "🐚 Web Shell Container Environment"
+echo "Node version: $(node --version 2>/dev/null || echo 'N/A')"
+echo "Working directory: $(pwd)"
