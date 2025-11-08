@@ -1,0 +1,107 @@
+.window-manager {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.tab-bar {
+  display: flex;
+  align-items: center;
+  background-color: #2d2d30;
+  border-bottom: 1px solid #3e3e42;
+  padding: 0;
+  height: 35px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tabs {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: #2d2d30;
+  border-right: 1px solid #3e3e42;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+  min-width: 120px;
+}
+
+.tab:hover {
+  background-color: #3e3e42;
+}
+
+.tab.active {
+  background-color: #1e1e1e;
+  border-bottom: 2px solid #007acc;
+}
+
+.tab-title {
+  font-size: 13px;
+  color: #cccccc;
+  flex: 1;
+}
+
+.tab.active .tab-title {
+  color: #ffffff;
+}
+
+.tab-close {
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.tab-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.add-terminal-btn {
+  background-color: #0e639c;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 16px;
+  margin: 0 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+  font-weight: 500;
+}
+
+.add-terminal-btn:hover {
+  background-color: #1177bb;
+}
+
+.add-terminal-btn:active {
+  background-color: #005a9e;
+}
+
+.terminal-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}

@@ -1,4 +1,4 @@
-import { TerminalComponent } from './components/Terminal';
+import { WindowManager } from './components/WindowManager';
 import './App.css';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
@@ -8,10 +8,10 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>🖥️ Web Shell</h1>
-        <p>Browser-based Terminal</p>
+        <p>Browser-based Terminal - Multi-Window</p>
       </header>
       <main className="app-main">
-        <TerminalComponent wsUrl={WS_URL} />
+        <WindowManager wsUrl={WS_URL} />
       </main>
     </div>
   );
