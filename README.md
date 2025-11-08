@@ -20,13 +20,14 @@ A secure, browser-based terminal application with Google OAuth authentication an
 ## Project Status
 
 ✅ **Phase 1-2 Complete!** Multi-window terminal working!
+✅ **Phase 4 Complete!** Docker deployment ready!
 
 ### Implementation Phases
 
 - [x] **Phase 1**: Foundation Setup ✅
 - [x] **Phase 2**: Multi-Window Support ✅ (OAuth moved to Phase 5)
-- [ ] **Phase 3**: Production Hardening (Security, HTTPS, rate limiting)
-- [ ] **Phase 4**: Docker Deployment (Full containerization)
+- [ ] **Phase 3**: Production Hardening (Deferred - TLS handled at nginx/Traefik layer)
+- [x] **Phase 4**: Docker Deployment ✅
 - [ ] **Phase 5**: Google OAuth Integration (Production auth)
 
 ## Prerequisites
@@ -36,25 +37,7 @@ A secure, browser-based terminal application with Google OAuth authentication an
 
 ## Quick Start
 
-### Installation
-
-```bash
-# Clone repository (if from git)
-git clone <repository-url>
-cd web-shell
-
-# Install backend dependencies
-cd backend
-npm install
-cd ..
-
-# Install frontend dependencies
-cd frontend
-npm install
-cd ..
-```
-
-### Running the Application
+### Development Mode (Local)
 
 **Option 1: Simple Startup Script** (Recommended)
 ```bash
@@ -84,6 +67,27 @@ Then open: **http://localhost:3377**
 ```bash
 ./stop.sh
 ```
+
+### Docker Deployment
+
+**Standalone Mode:**
+```bash
+docker compose up -d
+```
+Access: **http://localhost:3377**
+
+**Main Router Integration:**
+```bash
+# Option 1: Use deployment script (recommended)
+./deploy-to-main-router.sh
+
+# Option 2: Manual deployment
+cd ../main-router
+docker compose up -d --build web-shell-backend web-shell-frontend
+```
+Access: **http://localhost:8888/corey-private-router/web-shell**
+
+See [Docker Deployment Guide](docs/DOCKER.md) for complete documentation.
 
 ## Using the Terminal
 
@@ -179,9 +183,10 @@ This application provides shell access through a web browser. Please review [doc
 
 ## Documentation
 
-- [Architecture Design](docs/ARCHITECTURE.md)
-- [Security Requirements](docs/SECURITY.md)
-- [Implementation Workflow](docs/WORKFLOW.md)
+- [Docker Deployment Guide](docs/DOCKER.md)
+- [Main Router Integration](docs/main-router-integration.yml)
+- [Security Requirements](docs/SECURITY.md) (Coming soon)
+- [Architecture Design](docs/ARCHITECTURE.md) (Coming soon)
 - [API Documentation](docs/API.md) (Coming soon)
 
 ## License

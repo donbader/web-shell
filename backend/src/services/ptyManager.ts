@@ -1,4 +1,5 @@
 import * as pty from 'node-pty';
+import { existsSync } from 'fs';
 import { TerminalSession } from '../types/index.js';
 import config from '../config/config.js';
 
@@ -6,8 +7,23 @@ class PTYManager {
   private sessions: Map<string, TerminalSession> = new Map();
 
   createSession(userId: string, sessionId: string, cols: number = 80, rows: number = 24): TerminalSession {
-    // Determine shell to use (prefer user's default shell from SHELL env var)
-    const defaultShell = process.env.SHELL || (process.platform === 'win32' ? 'powershell.exe' : '/bin/bash');
+    // Determine shell to use (prefer zsh, fallback to sh for Alpine, bash for others)
+    let defaultShell = process.env.SHELL;
+
+    if (!defaultShell) {
+      if (process.platform === 'win32') {
+        defaultShell = 'powershell.exe';
+      } else {
+        // Try to find the best available shell
+        if (existsSync('/bin/zsh')) {
+          defaultShell = '/bin/zsh';
+        } else if (existsSync('/bin/bash')) {
+          defaultShell = '/bin/bash';
+        } else {
+          defaultShell = '/bin/sh';
+        }
+      }
+    }
 
     // Spawn PTY process with user's default shell
     const ptyProcess = pty.spawn(defaultShell, [], {

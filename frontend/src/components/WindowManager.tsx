@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TerminalWindow } from './TerminalWindow';
+import { generateUUID } from '../utils/uuid';
 import './WindowManager.css';
 
 const STORAGE_KEY = 'web-shell-windows';
@@ -33,7 +34,7 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
 
     // Default: single terminal
     const defaultWindow: TerminalWindowData = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title: 'Terminal 1',
       createdAt: Date.now(),
     };
@@ -51,7 +52,7 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
 
   const addWindow = () => {
     const newWindow: TerminalWindowData = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title: `Terminal ${state.windows.length + 1}`,
       createdAt: Date.now(),
     };

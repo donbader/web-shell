@@ -7,4 +7,5 @@ export default defineConfig({
   server: {
     port: 3377,
   },
+  base: process.env.VITE_BASE_PATH || '/',
 })
