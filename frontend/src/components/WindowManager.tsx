@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import { TerminalWindow } from './TerminalWindow';
-import { TerminalWindowData, WindowManagerState } from '../types';
 import './WindowManager.css';
 
 const STORAGE_KEY = 'web-shell-windows';
+
+interface TerminalWindowData {
+  id: string;
+  title: string;
+  createdAt: number;
+}
+
+interface WindowManagerState {
+  windows: TerminalWindowData[];
+  activeWindowId: string | null;
+}
 
 interface WindowManagerProps {
   wsUrl: string;

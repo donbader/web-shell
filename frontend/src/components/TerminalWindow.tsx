@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Terminal } from './Terminal';
+import { TerminalComponent } from './Terminal';
 import './TerminalWindow.css';
 
 interface TerminalWindowProps {
@@ -30,7 +30,7 @@ export function TerminalWindow({
       className={`terminal-window ${isActive ? 'active' : 'hidden'}`}
       data-window-id={windowId}
     >
-      <Terminal wsUrl={wsUrl} />
+      <TerminalComponent wsUrl={wsUrl} />
     </div>
   );
 }
