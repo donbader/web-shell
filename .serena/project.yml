@@ -1,0 +1,6 @@
+project_name: web-shell
+language: typescript
+description: Browser-based terminal application with Google OAuth authentication and multi-window support
+framework: react
+runtime: node
+architecture: fullstack
