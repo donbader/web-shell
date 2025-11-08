@@ -60,7 +60,7 @@ cd ..
 ```bash
 ./start.sh
 ```
-Then open: **http://localhost:5175**
+Then open: **http://localhost:3377**
 
 Press `Ctrl+C` to stop all servers.
 
@@ -78,7 +78,7 @@ cd frontend
 npm run dev
 ```
 
-Then open: **http://localhost:5175**
+Then open: **http://localhost:3377**
 
 **Option 3: Stop Running Servers**
 ```bash
@@ -89,7 +89,7 @@ Then open: **http://localhost:5175**
 
 ### Multi-Window Features
 
-Once the application is running at **http://localhost:5175**, you can:
+Once the application is running at **http://localhost:3377**, you can:
 
 1. **Create New Terminal**: Click the "+ New Terminal" button
 2. **Switch Tabs**: Click on any tab to make it active
@@ -153,18 +153,18 @@ npm run preview # Preview production build
 
 **Backend** (`backend/.env`):
 ```bash
-PORT=3000
+PORT=3366
 NODE_ENV=development
 AUTH_ENABLED=false                    # true for production with OAuth
-CORS_ORIGINS=http://localhost:5175
+CORS_ORIGINS=http://localhost:3377
 MAX_SESSIONS_PER_USER=5
 IDLE_TIMEOUT_MINUTES=30
 ```
 
 **Frontend** (`frontend/.env`):
 ```bash
-VITE_API_URL=http://localhost:3000
-VITE_WS_URL=ws://localhost:3000
+VITE_API_URL=http://localhost:3366
+VITE_WS_URL=ws://localhost:3366
 ```
 
 ## Security

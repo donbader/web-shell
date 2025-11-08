@@ -6,8 +6,11 @@ class PTYManager {
   private sessions: Map<string, TerminalSession> = new Map();
 
   createSession(userId: string, sessionId: string, cols: number = 80, rows: number = 24): TerminalSession {
-    // Spawn PTY process
-    const ptyProcess = pty.spawn(process.platform === 'win32' ? 'powershell.exe' : 'bash', [], {
+    // Determine shell to use (prefer user's default shell from SHELL env var)
+    const defaultShell = process.env.SHELL || (process.platform === 'win32' ? 'powershell.exe' : '/bin/bash');
+
+    // Spawn PTY process with user's default shell
+    const ptyProcess = pty.spawn(defaultShell, [], {
       name: 'xterm-color',
       cols,
       rows,

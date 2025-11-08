@@ -13,6 +13,32 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Terminal font rendering improvements */
+.xterm {
+  font-feature-settings: "liga" 0;
+  position: relative;
+  user-select: none;
+  -ms-user-select: none;
+  -webkit-user-select: none;
+}
+
+.xterm canvas {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.xterm .xterm-viewport {
+  overflow-y: scroll;
+  cursor: default;
+}
+
+.xterm .xterm-screen canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
 a {
   font-weight: 500;
   color: #646cff;

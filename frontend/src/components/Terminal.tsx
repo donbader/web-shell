@@ -22,7 +22,11 @@ export function TerminalComponent({ wsUrl }: TerminalComponentProps) {
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      lineHeight: 1.2,
+      fontFamily: '"Hack Nerd Font Mono", "Hack Nerd Font", "Cascadia Code", "Fira Code", monospace',
+      fontWeight: 'normal',
+      fontWeightBold: 'bold',
+      allowTransparency: false,
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4',
@@ -112,9 +116,16 @@ export function TerminalComponent({ wsUrl }: TerminalComponentProps) {
       wsService.ping();
     }, 30000); // Ping every 30 seconds
 
+    // Handle browser window/tab close
+    const handleBeforeUnload = () => {
+      wsService.close();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       clearInterval(pingInterval);
       wsService.close();
       terminal.dispose();

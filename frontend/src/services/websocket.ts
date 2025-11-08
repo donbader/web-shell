@@ -19,6 +19,7 @@ export class WebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private intentionallyClosed = false; // Track if close was intentional
 
   private onDataCallback: ((data: string) => void) | null = null;
   private onSessionCreatedCallback: ((sessionId: string) => void) | null = null;
@@ -30,6 +31,7 @@ export class WebSocketService {
   connect(): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
+        this.intentionallyClosed = false; // Reset flag on new connection
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
@@ -85,7 +87,10 @@ export class WebSocketService {
           if (this.onCloseCallback) {
             this.onCloseCallback();
           }
-          this.attemptReconnect();
+          // Only attempt reconnect if not intentionally closed
+          if (!this.intentionallyClosed) {
+            this.attemptReconnect();
+          }
         };
       } catch (error) {
         reject(error);
@@ -140,6 +145,7 @@ export class WebSocketService {
   }
 
   close(): void {
+    this.intentionallyClosed = true; // Mark as intentional close
     if (this.ws) {
       this.ws.close();
       this.ws = null;
