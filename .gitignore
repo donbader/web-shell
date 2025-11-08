@@ -49,6 +49,15 @@ tmp/
 temp/
 *.tmp
 
+# Process tracking
+*.pid
+.backend.pid
+.frontend.pid
+
+# AI/MCP context (Serena memory files)
+.serena/
+.claude/
+
 # System files
 .DS_Store
 Thumbs.db
