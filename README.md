@@ -19,43 +19,152 @@ A secure, browser-based terminal application with Google OAuth authentication an
 
 ## Project Status
 
-🚧 **In Development** - Following SuperClaude framework implementation workflow
+✅ **Phase 1-2 Complete!** Multi-window terminal working!
 
 ### Implementation Phases
 
-- [ ] **Phase 1**: Foundation Setup (Git, Frontend scaffold, Backend scaffold)
-- [ ] **Phase 2**: Google OAuth Integration (Complete auth flow)
-- [ ] **Phase 3**: Core Terminal (Single window with PTY)
-- [ ] **Phase 4**: Multi-Window Support (Tabbed interface)
-- [ ] **Phase 5**: Production Hardening (Security, monitoring)
-- [ ] **Phase 6**: Docker Deployment (Full containerization)
+- [x] **Phase 1**: Foundation Setup ✅
+- [x] **Phase 2**: Multi-Window Support ✅ (OAuth moved to Phase 5)
+- [ ] **Phase 3**: Production Hardening (Security, HTTPS, rate limiting)
+- [ ] **Phase 4**: Docker Deployment (Full containerization)
+- [ ] **Phase 5**: Google OAuth Integration (Production auth)
 
 ## Prerequisites
 
 - Node.js 20 LTS
-- Docker & docker-compose
-- Google Cloud Platform account (for OAuth credentials)
+- npm (comes with Node.js)
 
-## Quick Start (Coming Soon)
+## Quick Start
+
+### Installation
 
 ```bash
-# Clone repository
+# Clone repository (if from git)
 git clone <repository-url>
 cd web-shell
 
-# Install dependencies
+# Install backend dependencies
+cd backend
 npm install
+cd ..
 
-# Configure environment
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-# Edit .env files with your Google OAuth credentials
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
+```
 
-# Start development servers
+### Running the Application
+
+**Option 1: Simple Startup Script** (Recommended)
+```bash
+./start.sh
+```
+Then open: **http://localhost:5175**
+
+Press `Ctrl+C` to stop all servers.
+
+**Option 2: Manual (Two Terminals)**
+
+Terminal 1 - Backend:
+```bash
+cd backend
 npm run dev
+```
 
-# Or use Docker
-docker-compose up
+Terminal 2 - Frontend:
+```bash
+cd frontend
+npm run dev
+```
+
+Then open: **http://localhost:5175**
+
+**Option 3: Stop Running Servers**
+```bash
+./stop.sh
+```
+
+## Using the Terminal
+
+### Multi-Window Features
+
+Once the application is running at **http://localhost:5175**, you can:
+
+1. **Create New Terminal**: Click the "+ New Terminal" button
+2. **Switch Tabs**: Click on any tab to make it active
+3. **Close Terminal**: Click the × button on any tab (except the last one)
+4. **Run Commands**: Type commands in the active terminal
+
+### Example Multi-Window Workflow
+
+```bash
+# Tab 1: System monitoring
+htop
+
+# Tab 2: Code editing
+vim myfile.txt
+
+# Tab 3: Python development
+python3
+
+# Tab 4: File operations
+ls -la && pwd
+
+# Tab 5: Live logs
+tail -f /var/log/syslog
+```
+
+All terminals run independently and simultaneously!
+
+### Current Features
+
+- ✅ Real-time command execution
+- ✅ Multiple concurrent terminal sessions
+- ✅ Independent shell processes per tab
+- ✅ Tab state persistence (restored on page refresh)
+- ✅ Full terminal emulation (colors, interactive programs)
+- ✅ Responsive terminal sizing
+- ✅ Clickable URLs in terminal output
+- ⚠️ **Dev Mode**: No authentication (development only)
+
+## Development
+
+### Available Scripts
+
+**Backend:**
+```bash
+cd backend
+npm run dev         # Start dev server with hot reload
+npm run build       # Compile TypeScript to JavaScript
+npm run start       # Run compiled code
+npm run type-check  # Check TypeScript types
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm run dev    # Start dev server with hot reload
+npm run build  # Build for production
+npm run preview # Preview production build
+```
+
+### Environment Variables
+
+**Backend** (`backend/.env`):
+```bash
+PORT=3000
+NODE_ENV=development
+AUTH_ENABLED=false                    # true for production with OAuth
+CORS_ORIGINS=http://localhost:5175
+MAX_SESSIONS_PER_USER=5
+IDLE_TIMEOUT_MINUTES=30
+```
+
+**Frontend** (`frontend/.env`):
+```bash
+VITE_API_URL=http://localhost:3000
+VITE_WS_URL=ws://localhost:3000
 ```
 
 ## Security
