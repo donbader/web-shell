@@ -32,7 +32,16 @@ export class WebSocketService {
     return new Promise((resolve, reject) => {
       try {
         this.intentionallyClosed = false; // Reset flag on new connection
-        this.ws = new WebSocket(this.url);
+
+        // Add auth token to WebSocket URL if available
+        let wsUrl = this.url;
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          const separator = this.url.includes('?') ? '&' : '?';
+          wsUrl = `${this.url}${separator}token=${encodeURIComponent(token)}`;
+        }
+
+        this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
           console.log('[WebSocket] Connected');

@@ -31,13 +31,14 @@ router.post('/login', async (req: Request, res: Response) => {
     // Set httpOnly cookie for security
     res.cookie('auth_token', result.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: false, // Set to true only when using HTTPS
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
       maxAge: result.expiresAt - Date.now(),
     });
 
     res.json({
       success: true,
+      token: result.token, // Include token in response for localStorage
       user: result.user,
       expiresAt: result.expiresAt,
     });

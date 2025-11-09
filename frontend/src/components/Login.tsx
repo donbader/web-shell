@@ -5,6 +5,15 @@ interface LoginProps {
   onLoginSuccess: (token: string) => void;
 }
 
+// Construct API URL dynamically based on current host
+const getApiUrl = (): string => {
+  const protocol = window.location.protocol; // http: or https:
+  const host = window.location.host; // includes port if present
+  const basePath = '/corey-private-router/web-shell-api';
+
+  return `${protocol}//${host}${basePath}`;
+};
+
 export function Login({ onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +26,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
     setLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3366';
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {

@@ -3,6 +3,16 @@ import { WindowManager } from './components/WindowManager';
 import { Login } from './components/Login';
 import './App.css';
 
+// Construct API URL dynamically based on current host
+// This ensures it works whether accessing via localhost, IP, or domain
+const getApiUrl = (): string => {
+  const protocol = window.location.protocol; // http: or https:
+  const host = window.location.host; // includes port if present
+  const basePath = '/corey-private-router/web-shell-api';
+
+  return `${protocol}//${host}${basePath}`;
+};
+
 // Construct WebSocket URL dynamically based on current host
 // This ensures it works whether accessing via localhost, IP, or domain
 const getWebSocketUrl = (): string => {
@@ -13,6 +23,7 @@ const getWebSocketUrl = (): string => {
   return `${protocol}//${host}${basePath}`;
 };
 
+const API_URL = getApiUrl();
 const WS_URL = getWebSocketUrl();
 
 // Check if authentication is enabled
@@ -40,8 +51,7 @@ function App() {
       }
 
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3366';
-        const response = await fetch(`${apiUrl}/api/auth/verify`, {
+        const response = await fetch(`${API_URL}/api/auth/verify`, {
           credentials: 'include',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -72,8 +82,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3366';
-      await fetch(`${apiUrl}/api/auth/logout`, {
+      await fetch(`${API_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
