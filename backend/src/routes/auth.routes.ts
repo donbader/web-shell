@@ -7,26 +7,28 @@ import {
 import { LoginCredentials } from '../types/index.js';
 import config from '../config/config.js';
 import logger from '../utils/logger.js';
+import { loginRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
 /**
  * POST /api/auth/login
- * Login with username and password
+ * Login with password only (username not required)
+ * Rate limited to prevent brute-force attacks
  */
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginRateLimiter, async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body as LoginCredentials;
+    const { password } = req.body;
 
-    if (!username || !password) {
-      res.status(400).json({ error: 'Username and password are required' });
+    if (!password) {
+      res.status(400).json({ error: 'Password is required' });
       return;
     }
 
-    const result = await authenticateUser(username, password);
+    const result = await authenticateUser(password);
 
     if (!result) {
-      res.status(401).json({ error: 'Invalid username or password' });
+      res.status(401).json({ error: 'Invalid password' });
       return;
     }
 

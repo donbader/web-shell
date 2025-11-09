@@ -154,10 +154,12 @@ Environment variables are configured in `docker-compose.yml` for production depl
 
 **For Production**:
 - Enable authentication (`AUTH_ENABLED=true`)
+- Change default password (`DEFAULT_PASSWORD=your-secure-password`)
 - Use HTTPS/WSS
 - Configure reverse proxy (nginx/Traefik)
 - Set resource limits
 - Review security headers
+- Rate limiting enabled by default (5 attempts per 15 minutes)
 
 ## Troubleshooting
 

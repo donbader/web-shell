@@ -43,6 +43,12 @@ interface Config {
 
   /** Docker daemon connection endpoint (default: '/var/run/docker.sock') */
   dockerHost: string;
+
+  /** Rate limit window in milliseconds for login attempts (default: 900000 = 15 minutes) */
+  rateLimitWindowMs: number;
+
+  /** Maximum login attempts per window (default: 5) */
+  rateLimitMaxRequests: number;
 }
 
 /**
@@ -98,6 +104,8 @@ const config: Config = {
   sslCertPath: process.env.SSL_CERT_PATH || './certs/cert.pem',
   httpPort: parseInt(process.env.HTTP_PORT || '80', 10),
   dockerHost: process.env.DOCKER_HOST || '/var/run/docker.sock',
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '5', 10),
 };
 
 export default config;

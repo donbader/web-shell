@@ -20,34 +20,40 @@ const sessions = new Map<string, Session>();
 
 /**
  * Initialize default user (for development/testing)
- * Default credentials: admin / admin123
+ * Default credentials: password only (no username required)
+ * Password: admin123 (or from DEFAULT_PASSWORD env var)
  */
 export function initializeDefaultUser(): void {
-  const defaultUsername = process.env.DEFAULT_USERNAME || 'admin';
   const defaultPassword = process.env.DEFAULT_PASSWORD || 'admin123';
   const passwordHash = bcrypt.hashSync(defaultPassword, 10);
 
-  users.set(defaultUsername, {
+  // Use fixed username internally, but authentication is password-only
+  const internalUsername = 'system-user';
+
+  users.set(internalUsername, {
     userId: 'user-001',
-    username: defaultUsername,
-    email: `${defaultUsername}@localhost`,
+    username: internalUsername,
+    email: 'admin@localhost',
     name: 'Administrator',
     passwordHash,
   });
 
-  logger.info(`Default user created: ${defaultUsername}`);
+  logger.info('Password-only authentication initialized');
 }
 
 /**
- * Authenticate user with username and password
+ * Authenticate user with password only
+ * Username is no longer required - single password authentication
  */
 export async function authenticateUser(
-  username: string,
   password: string
 ): Promise<{ user: User; token: string; expiresAt: number } | null> {
-  const user = users.get(username);
+  // Use fixed internal username for single-password authentication
+  const internalUsername = 'system-user';
+  const user = users.get(internalUsername);
 
   if (!user) {
+    logger.error('System user not found - authentication system not initialized');
     return null;
   }
 

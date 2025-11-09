@@ -15,7 +15,6 @@ const getApiUrl = (): string => {
 };
 
 export function Login({ onLoginSuccess }: LoginProps) {
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,7 +32,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ password }),
       });
 
       const data = await response.json();
@@ -66,20 +65,6 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              required
-              autoFocus
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
               id="password"
@@ -88,6 +73,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               required
+              autoFocus
               disabled={loading}
             />
           </div>
