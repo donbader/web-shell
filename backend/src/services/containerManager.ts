@@ -16,8 +16,22 @@ class ContainerManager {
   private sessions: Map<string, ContainerSession> = new Map();
 
   constructor() {
-    // Connect to Docker daemon via socket
-    this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    // Connect to Docker daemon via configured host (socket or TCP proxy)
+    const dockerHost = config.dockerHost;
+
+    if (dockerHost.startsWith('tcp://')) {
+      // TCP connection through Docker socket proxy
+      const url = new URL(dockerHost);
+      this.docker = new Docker({
+        host: url.hostname,
+        port: parseInt(url.port || '2375', 10),
+      });
+      console.log(`[ContainerManager] Connected to Docker via proxy at ${dockerHost}`);
+    } else {
+      // Direct socket connection (legacy/local development)
+      this.docker = new Docker({ socketPath: dockerHost });
+      console.log(`[ContainerManager] Connected to Docker via socket at ${dockerHost}`);
+    }
   }
 
   /**

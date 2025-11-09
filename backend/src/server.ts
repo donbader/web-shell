@@ -1,5 +1,7 @@
 import express from 'express';
-import { createServer } from 'http';
+import { createServer as createHttpServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
+import { readFileSync } from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -18,7 +20,47 @@ import { WebSocketMessage, WebSocketResponse } from './types/index.js';
 import { randomUUID } from 'crypto';
 
 const app = express();
-const server = createServer(app);
+
+// Create server based on environment and HTTPS configuration
+let server: ReturnType<typeof createHttpServer> | ReturnType<typeof createHttpsServer>;
+let httpRedirectServer: ReturnType<typeof createHttpServer> | null = null;
+
+if (config.useHttps) {
+  try {
+    // Load SSL certificates
+    const httpsOptions = {
+      key: readFileSync(config.sslKeyPath),
+      cert: readFileSync(config.sslCertPath),
+    };
+
+    server = createHttpsServer(httpsOptions, app);
+    console.log('[Server] HTTPS enabled with SSL certificates');
+
+    // Create HTTP to HTTPS redirect server
+    if (config.nodeEnv === 'production') {
+      httpRedirectServer = createHttpServer((req, res) => {
+        const host = req.headers.host?.split(':')[0] || 'localhost';
+        const redirectUrl = `https://${host}:${config.port}${req.url}`;
+        res.writeHead(301, { Location: redirectUrl });
+        res.end();
+      });
+      console.log(`[Server] HTTP→HTTPS redirect enabled on port ${config.httpPort}`);
+    }
+  } catch (error) {
+    console.error('[Server] CRITICAL ERROR: Failed to load SSL certificates');
+    console.error(`[Server] Key path: ${config.sslKeyPath}`);
+    console.error(`[Server] Cert path: ${config.sslCertPath}`);
+    console.error(`[Server] Error: ${error}`);
+    console.error('[Server] Generate self-signed certificates with:');
+    console.error('[Server]   mkdir -p backend/certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\');
+    console.error('[Server]     -keyout backend/certs/key.pem -out backend/certs/cert.pem');
+    process.exit(1);
+  }
+} else {
+  server = createHttpServer(app);
+  console.log('[Server] HTTP mode (development)');
+}
+
 const wss = new WebSocketServer({ server });
 
 // Initialize default user if auth is enabled
@@ -227,10 +269,14 @@ setInterval(() => {
 
 // Start server
 server.listen(config.port, () => {
+  const protocol = config.useHttps ? 'HTTPS' : 'HTTP';
+  const wsProtocol = config.useHttps ? 'WSS' : 'WS';
+
   console.log(`
 ╔═══════════════════════════════════════════════════════╗
 ║         Web Shell Backend Server                      ║
 ╠═══════════════════════════════════════════════════════╣
+║  Protocol:    ${protocol} / ${wsProtocol}                                ║
 ║  Port:        ${config.port}                                    ║
 ║  Environment: ${config.nodeEnv}                      ║
 ║  Auth:        ${config.authEnabled ? 'Enabled (Password)' : 'Disabled (Dev Mode)'}  ║
@@ -238,13 +284,37 @@ server.listen(config.port, () => {
 ║  Session:     ${config.sessionExpiry}                               ║
 ╚═══════════════════════════════════════════════════════╝
   `);
+
+  if (config.useHttps) {
+    console.log('🔒 Secure connections enabled (HTTPS/WSS)');
+    console.log(`   SSL Key:  ${config.sslKeyPath}`);
+    console.log(`   SSL Cert: ${config.sslCertPath}`);
+  } else {
+    console.log('⚠️  INSECURE: Running without HTTPS (development only)');
+    console.log('   Set USE_HTTPS=true for production deployment');
+  }
 });
+
+// Start HTTP redirect server if configured
+if (httpRedirectServer) {
+  httpRedirectServer.listen(config.httpPort, () => {
+    console.log(`🔀 HTTP redirect server listening on port ${config.httpPort}`);
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('[Server] SIGTERM received, shutting down gracefully...');
   server.close(() => {
-    console.log('[Server] HTTP server closed');
+    console.log('[Server] Main server closed');
+
+    // Close HTTP redirect server if running
+    if (httpRedirectServer) {
+      httpRedirectServer.close(() => {
+        console.log('[Server] HTTP redirect server closed');
+      });
+    }
+
     // Clean up all PTY sessions
     const sessions = ptyManager.getAllSessions();
     sessions.forEach(s => ptyManager.terminateSession(s.sessionId));

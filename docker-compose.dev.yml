@@ -1,4 +1,40 @@
 services:
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: web-shell-docker-proxy-dev
+    restart: unless-stopped
+    privileged: true  # Required to access Docker socket
+    environment:
+      # Grant minimal permissions needed for web-shell functionality
+      CONTAINERS: 1      # Create/manage containers
+      EXEC: 1           # Execute commands in containers
+      IMAGES: 1         # Pull/manage images
+      BUILD: 1          # Build images (required for environment creation)
+      VOLUMES: 1        # Create/manage volumes
+      NETWORKS: 1       # Network access for containers
+      INFO: 1           # Docker info (useful for health checks)
+
+      # Deny dangerous operations
+      COMMIT: 0         # Deny container commits
+      CONFIGS: 0        # Deny config management
+      DISTRIBUTION: 0   # Deny distribution operations
+      SECRETS: 0        # Deny secrets access
+      SERVICES: 0       # Deny service management
+      SWARM: 0          # Deny swarm operations
+      SYSTEM: 0         # Deny system operations
+      TASKS: 0          # Deny task management
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only mount
+    networks:
+      - docker-proxy-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:2375/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   backend:
     build:
       context: ./backend
@@ -10,8 +46,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-node-modules:/app/node_modules
-      # Mount Docker socket for Docker-in-Docker (DinD)
-      - /var/run/docker.sock:/var/run/docker.sock
+      # SECURITY: Direct Docker socket mount REMOVED - access now through proxy
     environment:
       - NODE_ENV=development
       - PORT=3366
@@ -19,16 +54,18 @@ services:
       - CORS_ORIGINS=http://localhost:5173
       - MAX_SESSIONS_PER_USER=10
       - IDLE_TIMEOUT_MINUTES=60
-      # Docker socket path
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Docker proxy connection
+      - DOCKER_HOST=tcp://docker-proxy:2375
     command: npm run dev
     restart: unless-stopped
     networks:
       - web-shell-network
+      - docker-proxy-network  # Connect to proxy network
+    depends_on:
+      docker-proxy:
+        condition: service_healthy
     stdin_open: true
     tty: true
-    # Allow backend to manage Docker containers
-    privileged: false  # Not needed with socket mount
 
   frontend:
     build:
@@ -55,6 +92,9 @@ services:
 networks:
   web-shell-network:
     driver: bridge
+  docker-proxy-network:  # Isolated network for Docker proxy access
+    driver: bridge
+    internal: false  # Proxy needs external access to Docker daemon
 
 volumes:
   backend-node-modules:

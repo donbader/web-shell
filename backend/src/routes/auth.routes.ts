@@ -5,6 +5,7 @@ import {
   logoutUser,
 } from '../services/authService.js';
 import { LoginCredentials } from '../types/index.js';
+import config from '../config/config.js';
 
 const router = Router();
 
@@ -29,10 +30,11 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Set httpOnly cookie for security
+    // Enable secure flag in production (HTTPS) to prevent cookie theft
     res.cookie('auth_token', result.token, {
       httpOnly: true,
-      secure: false, // Set to true only when using HTTPS
-      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+      secure: config.useHttps, // Enforce HTTPS in production
+      sameSite: config.nodeEnv === 'production' ? 'strict' : 'lax',
       maxAge: result.expiresAt - Date.now(),
     });
 

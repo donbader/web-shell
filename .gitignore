@@ -9,7 +9,11 @@ pnpm-debug.log*
 .env
 .env.local
 .env.production
+.env.development
 .env.*.local
+backend/.env*
+frontend/.env*
+**/.env*
 
 # Build outputs
 dist/
@@ -37,9 +41,17 @@ logs/
 # Secrets and credentials (CRITICAL: Security)
 *.key
 *.pem
+*.crt
+*.csr
 secrets/
 credentials/
 .google-credentials.json
+backend/certs/
+frontend/certs/
+certs/
+*.secret
+*.p12
+*.pfx
 
 # Docker
 .dockerignore

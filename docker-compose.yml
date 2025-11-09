@@ -1,4 +1,40 @@
 services:
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: web-shell-docker-proxy
+    restart: unless-stopped
+    privileged: true  # Required to access Docker socket
+    environment:
+      # Grant minimal permissions needed for web-shell functionality
+      CONTAINERS: 1      # Create/manage containers
+      EXEC: 1           # Execute commands in containers
+      IMAGES: 1         # Pull/manage images
+      BUILD: 1          # Build images (required for environment creation)
+      VOLUMES: 1        # Create/manage volumes
+      NETWORKS: 1       # Network access for containers
+      INFO: 1           # Docker info (useful for health checks)
+
+      # Deny dangerous operations
+      COMMIT: 0         # Deny container commits
+      CONFIGS: 0        # Deny config management
+      DISTRIBUTION: 0   # Deny distribution operations
+      SECRETS: 0        # Deny secrets access
+      SERVICES: 0       # Deny service management
+      SWARM: 0          # Deny swarm operations
+      SYSTEM: 0         # Deny system operations
+      TASKS: 0          # Deny task management
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only mount
+    networks:
+      - docker-proxy-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:2375/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   backend:
     build:
       context: ./backend
@@ -10,6 +46,8 @@ services:
     restart: unless-stopped
     ports:
       - "3366:3366"
+      # Uncomment for HTTP→HTTPS redirect in production
+      # - "80:80"
     environment:
       - NODE_ENV=production
       - PORT=3366
@@ -17,14 +55,25 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3377}
       - MAX_SESSIONS_PER_USER=${MAX_SESSIONS_PER_USER:-5}
       - IDLE_TIMEOUT_MINUTES=${IDLE_TIMEOUT_MINUTES:-30}
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DOCKER_HOST=tcp://docker-proxy:2375  # Connect through proxy instead of direct socket
+      # HTTPS/SSL Configuration
+      - USE_HTTPS=${USE_HTTPS:-false}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/app/certs/key.pem}
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/app/certs/cert.pem}
+      - HTTP_PORT=${HTTP_PORT:-80}
+      - JWT_SECRET=${JWT_SECRET}
     volumes:
       # Optional: Mount host directory for persistent session data
       - backend-data:/app/data
-      # Mount Docker socket for container management
-      - /var/run/docker.sock:/var/run/docker.sock
+      # SECURITY: Direct Docker socket mount REMOVED - access now through proxy
+      # Mount SSL certificates (production)
+      # - /etc/ssl/private:/app/certs:ro
     networks:
       - web-shell-network
+      - docker-proxy-network  # Connect to proxy network
+    depends_on:
+      docker-proxy:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3366/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -76,6 +125,9 @@ services:
 networks:
   web-shell-network:
     driver: bridge
+  docker-proxy-network:  # Isolated network for Docker proxy access
+    driver: bridge
+    internal: false  # Proxy needs external access to Docker daemon
 
 volumes:
   backend-data:
