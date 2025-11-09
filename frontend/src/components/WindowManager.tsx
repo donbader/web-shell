@@ -64,7 +64,7 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       id: generateUUID(),
       title: `Terminal ${state.windows.length + 1}`,
       createdAt: Date.now(),
-      shell: config.shell,
+      shell: 'zsh', // Default to zsh (can be changed by user in terminal)
       environment: config.environment,
     };
 
@@ -120,6 +120,11 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
               onClick={() => setActiveWindow(window.id)}
             >
               <span className="tab-title">{window.title}</span>
+              {window.environment && (
+                <span className={`tab-env-badge ${window.environment}`}>
+                  {window.environment === 'minimal' ? '⚡' : '🚀'}
+                </span>
+              )}
               {state.windows.length > 1 && (
                 <button
                   className="tab-close"

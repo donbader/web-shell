@@ -25,10 +25,14 @@
   background: #1e1e1e;
   border-radius: 12px;
   padding: 2rem;
-  max-width: 600px;
+  max-width: 400px;
   width: 90%;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease-out;
+}
+
+.environment-selector.simple {
+  max-width: 350px;
 }
 
 @keyframes slideUp {
@@ -63,51 +67,34 @@
   letter-spacing: 0.05em;
 }
 
-.selector-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.selector-option {
+.environment-dropdown {
+  width: 100%;
+  padding: 0.75rem 1rem;
   background: #2a2a2a;
-  border: 2px solid transparent;
+  border: 2px solid #3a3a3a;
   border-radius: 8px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.selector-option:hover {
-  background: #333;
-  border-color: #444;
-}
-
-.selector-option.selected {
-  background: #2a4a6a;
-  border-color: #4a90e2;
-}
-
-.option-icon {
-  font-size: 2rem;
-  margin-bottom: 0.25rem;
-}
-
-.option-label {
   color: #e0e0e0;
   font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
 }
 
-.option-desc {
-  color: #888;
-  font-size: 0.75rem;
-  line-height: 1.4;
+.environment-dropdown:hover {
+  border-color: #4a4a4a;
+  background: #2f2f2f;
+}
+
+.environment-dropdown:focus {
+  border-color: #4a90e2;
+  background: #2f2f2f;
+}
+
+.environment-dropdown option {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  padding: 0.5rem;
 }
 
 .selector-actions {
@@ -150,10 +137,6 @@
 }
 
 @media (max-width: 640px) {
-  .selector-options {
-    grid-template-columns: 1fr;
-  }
-
   .environment-selector {
     width: 95%;
     padding: 1.5rem;

@@ -7,6 +7,7 @@ import config from './config/config.js';
 import ptyManager from './services/ptyManager.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
+import environmentRoutes from './routes/environments.js';
 import {
   initializeDefaultUser,
   verifyToken,
@@ -36,6 +37,9 @@ app.get('/health', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// Environment metadata routes (public)
+app.use('/api/environments', environmentRoutes);
 
 // API routes with auth
 app.get('/api/sessions', authMiddleware, (req, res) => {

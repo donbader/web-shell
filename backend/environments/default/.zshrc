@@ -73,10 +73,10 @@ if [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.
   source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 fi
 
-# Prompt
+# Prompt with environment indicator
 setopt PROMPT_SUBST
 autoload -U colors && colors
-PROMPT='%F{green}%n@%m%f:%F{blue}%~%f$ '
+PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %F{yellow}[${ENVIRONMENT:-unknown}]%f$ '
 RPROMPT='%F{8}%*%f'
 
 # Options

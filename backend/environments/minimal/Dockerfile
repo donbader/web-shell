@@ -1,6 +1,9 @@
 # Minimal Environment Dockerfile
-# Bare essentials for smallest image
+# Bare essentials - This is the BASE image for all environments
 
+# ============================================
+# STAGE 1: Builder (SHARED by all environments)
+# ============================================
 FROM node:20-alpine AS builder
 
 RUN apk add --no-cache python3 make g++
@@ -11,8 +14,10 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production - MINIMAL
-FROM node:20-alpine
+# ============================================
+# STAGE 2: Minimal Production (BASE LAYER)
+# ============================================
+FROM node:20-alpine AS minimal
 
 # Install only essential packages
 RUN apk add --no-cache \
@@ -22,19 +27,22 @@ RUN apk add --no-cache \
 
 ENV NODE_ENV=production
 ENV SHELL=/bin/zsh
+ENV ENVIRONMENT=minimal
 
 WORKDIR /app
 
+# Copy production dependencies
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy shell configurations
+# Copy minimal shell configurations
 COPY environments/minimal/.zshrc /home/node/.zshrc
 COPY environments/minimal/.bashrc /home/node/.bashrc
 
-RUN chown node:node /home/node/.zshrc /home/node/.bashrc
+RUN chown -R node:node /home/node
 
 USER node
 

@@ -19,8 +19,8 @@ alias ...='cd ../..'
 alias h='history'
 alias c='clear'
 
-# Simple prompt
-PROMPT='%F{green}%n@%m%f:%F{blue}%~%f$ '
+# Prompt with environment indicator
+PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %F{yellow}[${ENVIRONMENT:-unknown}]%f$ '
 
 # Options
 setopt NO_BEEP

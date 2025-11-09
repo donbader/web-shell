@@ -3,6 +3,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=${BACKEND_ENVIRONMENT:-default}
+    image: web-shell-backend:${BACKEND_ENVIRONMENT:-default}
     container_name: web-shell-backend
     restart: unless-stopped
     ports:

@@ -2,7 +2,11 @@
 
 ## Overview
 
-Web Shell now runs entirely in Docker containers for consistent development and production environments.
+Web Shell runs in Docker containers with **multi-environment support**:
+- **Minimal**: Lightweight, fast startup (~200MB, < 1s boot)
+- **Default**: Full-featured development environment (~240MB, < 2s boot)
+
+Both environments use **multi-stage builds** where default extends minimal for efficient layer sharing.
 
 ## Quick Start
 
@@ -15,6 +19,21 @@ Web Shell now runs entirely in Docker containers for consistent development and 
 # Stop services
 ./stop.sh
 ```
+
+### Environment Selection
+
+Choose your backend environment via `.env` file or environment variable:
+
+```bash
+# Minimal environment (fastest, smallest)
+BACKEND_ENVIRONMENT=minimal docker compose up
+
+# Default environment (full-featured)
+BACKEND_ENVIRONMENT=default docker compose up
+# Or just: docker compose up (default is the default)
+```
+
+See [Environment Implementation Guide](docs/environment-implementation.md) for details.
 
 ### Manual Docker Compose
 

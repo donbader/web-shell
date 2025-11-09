@@ -50,10 +50,24 @@
   font-size: 13px;
   color: #cccccc;
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tab.active .tab-title {
   color: #ffffff;
+}
+
+.tab-env-badge {
+  font-size: 0.875rem;
+  margin-left: 0.125rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.tab:hover .tab-env-badge {
+  opacity: 1;
 }
 
 .tab-close {
