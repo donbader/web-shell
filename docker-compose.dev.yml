@@ -50,7 +50,9 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3366
-      - AUTH_ENABLED=false
+      - AUTH_ENABLED=true
+      - USE_HTTPS=false
+      - DEFAULT_PASSWORD=admin123
       - CORS_ORIGINS=http://localhost:5173
       - MAX_SESSIONS_PER_USER=10
       - IDLE_TIMEOUT_MINUTES=60
