@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { WindowManager } from './components/WindowManager';
 import { Login } from './components/Login';
 import { getApiUrl, getWebSocketUrl } from './utils/apiUrl';
-import './App.css';
+import { Button } from '@/components/ui/button';
+import { Terminal, LogOut, Loader2 } from 'lucide-react';
 
 const API_URL = getApiUrl();
 const WS_URL = getWebSocketUrl();
@@ -78,10 +79,10 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="app">
-        <div className="loading-screen">
-          <div className="spinner"></div>
-          <p>Loading...</p>
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-lg text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -92,19 +93,35 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div>
-          <h1>🖥️ Web Shell</h1>
-          <p>Browser-based Terminal - Multi-Window</p>
+    <div className="min-h-screen w-full flex flex-col bg-background">
+      {/* Header - Mobile Responsive */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 max-w-screen-2xl items-center px-4 sm:px-6">
+          <div className="flex items-center gap-2 flex-1">
+            <Terminal className="h-5 w-5 text-primary hidden sm:block" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight">Web Shell</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Multi-Window Terminal
+              </p>
+            </div>
+          </div>
+          {AUTH_ENABLED && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          )}
         </div>
-        {AUTH_ENABLED && (
-          <button className="logout-button" onClick={handleLogout}>
-            Logout
-          </button>
-        )}
       </header>
-      <main className="app-main">
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden">
         <WindowManager wsUrl={WS_URL} />
       </main>
     </div>

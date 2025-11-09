@@ -6,7 +6,9 @@ import type { EnvironmentConfig } from './EnvironmentSelector';
 import { generateUUID } from '../utils/uuid';
 import { ensureImage } from '../services/imageService';
 import type { BuildProgress } from '../services/imageService';
-import './WindowManager.css';
+import { Button } from '@/components/ui/button';
+import { Plus, X, Zap, Rocket } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'web-shell-windows';
 
@@ -208,47 +210,62 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
   };
 
   return (
-    <div className="window-manager">
-      <div className="tab-bar">
-        <div className="tabs">
+    <div className="flex flex-col h-full">
+      {/* Tab Bar - Mobile Responsive */}
+      <div className="flex items-center gap-2 px-2 sm:px-4 py-2 border-b bg-muted/30 overflow-x-auto">
+        {/* Tabs Container - Scrollable on mobile */}
+        <div className="flex gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin">
           {state.windows.map(window => (
-            <div
+            <button
               key={window.id}
-              className={`tab ${state.activeWindowId === window.id ? 'active' : ''}`}
               onClick={() => setActiveWindow(window.id)}
+              className={cn(
+                "flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0",
+                "hover:bg-accent hover:text-accent-foreground",
+                state.activeWindowId === window.id
+                  ? "bg-background text-foreground shadow-sm border"
+                  : "text-muted-foreground"
+              )}
             >
-              <span className="tab-title">{window.title}</span>
+              <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                {window.title}
+              </span>
               {window.environment && (
-                <span className={`tab-env-badge ${window.environment}`}>
-                  {window.environment === 'minimal' ? '⚡' : '🚀'}
+                <span className="flex-shrink-0" title={window.environment}>
+                  {window.environment === 'minimal' ? <Zap className="h-3 w-3" /> : <Rocket className="h-3 w-3" />}
                 </span>
               )}
               {state.windows.length > 1 && (
                 <button
-                  className="tab-close"
                   onClick={(e) => {
                     e.stopPropagation();
                     closeWindow(window.id);
                   }}
+                  className="flex-shrink-0 ml-1 hover:text-destructive transition-colors"
                   aria-label="Close terminal"
                 >
-                  ×
+                  <X className="h-3 w-3" />
                 </button>
               )}
-            </div>
+            </button>
           ))}
         </div>
-        <button
-          className="add-terminal-btn"
+
+        {/* Add Terminal Button */}
+        <Button
           onClick={addWindow}
+          size="sm"
+          variant="outline"
+          className="flex-shrink-0 gap-1.5"
           aria-label="New terminal"
-          title="New terminal"
         >
-          + New Terminal
-        </button>
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">New</span>
+        </Button>
       </div>
 
-      <div className="terminal-container">
+      {/* Terminal Container */}
+      <div className="flex-1 relative overflow-hidden">
         {imagesReady && state.windows.map(window => (
           <TerminalWindow
             key={window.id}
