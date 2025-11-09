@@ -1,19 +1,47 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+/**
+ * Application configuration interface with comprehensive environment variable mapping
+ */
 interface Config {
+  /** Server port for HTTP/HTTPS and WebSocket connections (default: 3000) */
   port: number;
+
+  /** Node.js environment mode: 'development' | 'production' (default: 'development') */
   nodeEnv: string;
+
+  /** Enable authentication system (default: false, should be true in production) */
   authEnabled: boolean;
+
+  /** Allowed CORS origins as array (default: ['http://localhost:5173']) */
   corsOrigins: string[];
+
+  /** JWT token lifetime in time format (1h, 30m, 7d) (default: '24h') */
   sessionExpiry: string;
+
+  /** Maximum concurrent sessions per user to prevent resource exhaustion (default: 5) */
   maxSessionsPerUser: number;
+
+  /** Auto-close sessions after this many minutes of inactivity (default: 30) */
   idleTimeoutMinutes: number;
+
+  /** JWT secret for token signing (REQUIRED in production, min 32 chars) */
   jwtSecret: string;
+
+  /** Enable HTTPS/WSS encrypted connections (default: false, recommended for production) */
   useHttps: boolean;
+
+  /** Path to SSL private key file (required if useHttps=true) (default: './certs/key.pem') */
   sslKeyPath: string;
+
+  /** Path to SSL certificate file (required if useHttps=true) (default: './certs/cert.pem') */
   sslCertPath: string;
+
+  /** HTTP port for HTTP→HTTPS redirect (production only) (default: 80) */
   httpPort: number;
+
+  /** Docker daemon connection endpoint (default: '/var/run/docker.sock') */
   dockerHost: string;
 }
 

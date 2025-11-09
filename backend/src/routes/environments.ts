@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getAllEnvironments, getEnvironmentMetadata, compareEnvironments } from '../config/environments';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -15,7 +16,9 @@ router.get('/', (req: Request, res: Response) => {
       environments,
     });
   } catch (error) {
-    console.error('[API] Error fetching environments:', error);
+    logger.error('Error fetching environments', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch environment metadata',
@@ -44,7 +47,10 @@ router.get('/:name', (req: Request, res: Response) => {
       environment,
     });
   } catch (error) {
-    console.error('[API] Error fetching environment:', error);
+    logger.error('Error fetching environment', {
+      name: req.params.name,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch environment metadata',
@@ -73,7 +79,11 @@ router.get('/compare/:env1/:env2', (req: Request, res: Response) => {
       comparison,
     });
   } catch (error) {
-    console.error('[API] Error comparing environments:', error);
+    logger.error('Error comparing environments', {
+      env1: req.params.env1,
+      env2: req.params.env2,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to compare environments',

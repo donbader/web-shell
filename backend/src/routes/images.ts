@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import containerManager from '../services/containerManager.js';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -12,7 +13,9 @@ router.get('/', async (req: Request, res: Response) => {
     const images = await containerManager.listImages();
     res.json({ images });
   } catch (error) {
-    console.error('[Images API] Error listing images:', error);
+    logger.error('Error listing images', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       error: 'Failed to list images',
       message: error instanceof Error ? error.message : String(error),
@@ -40,7 +43,10 @@ router.get('/check/:environment', async (req: Request, res: Response) => {
 
     res.json({ environment, exists });
   } catch (error) {
-    console.error('[Images API] Error checking image:', error);
+    logger.error('Error checking image', {
+      environment: req.params.environment,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       error: 'Failed to check image',
       message: error instanceof Error ? error.message : String(error),
@@ -85,7 +91,10 @@ router.post('/build/:environment', async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify({ status: 'completed', environment })}\n\n`);
     res.end();
   } catch (error) {
-    console.error('[Images API] Error building image:', error);
+    logger.error('Error building image', {
+      environment: req.params.environment,
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     // Send error event
     const errorEvent = {

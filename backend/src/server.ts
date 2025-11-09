@@ -6,6 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import config from './config/config.js';
+import { validateEnvironment, logConfiguration } from './config/validation.js';
 import ptyManager from './services/ptyManager.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
@@ -18,6 +19,10 @@ import {
 } from './services/authService.js';
 import { WebSocketMessage, WebSocketResponse } from './types/index.js';
 import { randomUUID } from 'crypto';
+import logger from './utils/logger.js';
+
+// Validate environment configuration at startup
+validateEnvironment();
 
 const app = express();
 
@@ -34,7 +39,7 @@ if (config.useHttps) {
     };
 
     server = createHttpsServer(httpsOptions, app);
-    console.log('[Server] HTTPS enabled with SSL certificates');
+    logger.info('HTTPS enabled with SSL certificates');
 
     // Create HTTP to HTTPS redirect server
     if (config.nodeEnv === 'production') {
@@ -44,21 +49,22 @@ if (config.useHttps) {
         res.writeHead(301, { Location: redirectUrl });
         res.end();
       });
-      console.log(`[Server] HTTP→HTTPS redirect enabled on port ${config.httpPort}`);
+      logger.info(`HTTP→HTTPS redirect enabled on port ${config.httpPort}`);
     }
   } catch (error) {
-    console.error('[Server] CRITICAL ERROR: Failed to load SSL certificates');
-    console.error(`[Server] Key path: ${config.sslKeyPath}`);
-    console.error(`[Server] Cert path: ${config.sslCertPath}`);
-    console.error(`[Server] Error: ${error}`);
-    console.error('[Server] Generate self-signed certificates with:');
-    console.error('[Server]   mkdir -p backend/certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\');
-    console.error('[Server]     -keyout backend/certs/key.pem -out backend/certs/cert.pem');
+    logger.error('CRITICAL ERROR: Failed to load SSL certificates', {
+      keyPath: config.sslKeyPath,
+      certPath: config.sslCertPath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    logger.error('Generate self-signed certificates with:');
+    logger.error('  mkdir -p backend/certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\');
+    logger.error('    -keyout backend/certs/key.pem -out backend/certs/cert.pem');
     process.exit(1);
   }
 } else {
   server = createHttpServer(app);
-  console.log('[Server] HTTP mode (development)');
+  logger.info('HTTP mode (development)');
 }
 
 const wss = new WebSocketServer({ server });
@@ -109,7 +115,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   if (!config.authEnabled) {
     // Dev mode: Auto-assign user
     userId = 'dev-user';
-    console.log(`[WebSocket] Connection from dev user`);
+    logger.debug('WebSocket connection from dev user');
   } else {
     // Production mode: Verify JWT
     const token = extractTokenFromRequest(req);
@@ -127,7 +133,7 @@ wss.on('connection', (ws: WebSocket, req) => {
     }
 
     userId = user.userId;
-    console.log(`[WebSocket] Connection from user: ${userId}`);
+    logger.debug(`WebSocket connection from user: ${userId}`);
   }
 
   // Check session limit
@@ -181,7 +187,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 
           // Handle stream close
           session.ptyProcess.on('end', () => {
-            console.log(`[PTY] Stream ended for session ${sessionId}`);
+            logger.debug(`PTY stream ended for session ${sessionId}`);
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({
                 type: 'error',
@@ -210,22 +216,28 @@ wss.on('connection', (ws: WebSocket, req) => {
           break;
 
         default:
-          console.warn('[WebSocket] Unknown message type:', msg.type);
+          logger.warn(`Unknown WebSocket message type: ${msg.type}`);
       }
     } catch (error) {
-      console.error('[WebSocket] Error processing message:', error);
+      logger.error('Error processing WebSocket message', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   });
 
   // Handle WebSocket close
   ws.on('close', () => {
-    console.log(`[WebSocket] Connection closed for session ${sessionId}`);
+    logger.debug(`WebSocket connection closed for session ${sessionId}`);
     ptyManager.terminateSession(sessionId);
   });
 
   // Handle WebSocket errors
   ws.on('error', (error) => {
-    console.error('[WebSocket] Error:', error);
+    logger.error('WebSocket error', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     ptyManager.terminateSession(sessionId);
   });
 });
@@ -272,7 +284,7 @@ server.listen(config.port, () => {
   const protocol = config.useHttps ? 'HTTPS' : 'HTTP';
   const wsProtocol = config.useHttps ? 'WSS' : 'WS';
 
-  console.log(`
+  logger.info(`
 ╔═══════════════════════════════════════════════════════╗
 ║         Web Shell Backend Server                      ║
 ╠═══════════════════════════════════════════════════════╣
@@ -286,32 +298,32 @@ server.listen(config.port, () => {
   `);
 
   if (config.useHttps) {
-    console.log('🔒 Secure connections enabled (HTTPS/WSS)');
-    console.log(`   SSL Key:  ${config.sslKeyPath}`);
-    console.log(`   SSL Cert: ${config.sslCertPath}`);
+    logger.info('🔒 Secure connections enabled (HTTPS/WSS)');
+    logger.info(`   SSL Key:  ${config.sslKeyPath}`);
+    logger.info(`   SSL Cert: ${config.sslCertPath}`);
   } else {
-    console.log('⚠️  INSECURE: Running without HTTPS (development only)');
-    console.log('   Set USE_HTTPS=true for production deployment');
+    logger.warn('⚠️  INSECURE: Running without HTTPS (development only)');
+    logger.warn('   Set USE_HTTPS=true for production deployment');
   }
 });
 
 // Start HTTP redirect server if configured
 if (httpRedirectServer) {
   httpRedirectServer.listen(config.httpPort, () => {
-    console.log(`🔀 HTTP redirect server listening on port ${config.httpPort}`);
+    logger.info(`🔀 HTTP redirect server listening on port ${config.httpPort}`);
   });
 }
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('[Server] SIGTERM received, shutting down gracefully...');
+  logger.info('SIGTERM received, shutting down gracefully...');
   server.close(() => {
-    console.log('[Server] Main server closed');
+    logger.info('Main server closed');
 
     // Close HTTP redirect server if running
     if (httpRedirectServer) {
       httpRedirectServer.close(() => {
-        console.log('[Server] HTTP redirect server closed');
+        logger.info('HTTP redirect server closed');
       });
     }
 

@@ -6,6 +6,7 @@ import {
 } from '../services/authService.js';
 import { LoginCredentials } from '../types/index.js';
 import config from '../config/config.js';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -45,7 +46,9 @@ router.post('/login', async (req: Request, res: Response) => {
       expiresAt: result.expiresAt,
     });
   } catch (error) {
-    console.error('[Auth] Login error:', error);
+    logger.error('Login error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

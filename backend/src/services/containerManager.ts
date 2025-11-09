@@ -1,5 +1,6 @@
 import Docker from 'dockerode';
 import config from '../config/config.js';
+import logger from '../utils/logger.js';
 
 interface ContainerSession {
   containerId: string;
@@ -26,11 +27,11 @@ class ContainerManager {
         host: url.hostname,
         port: parseInt(url.port || '2375', 10),
       });
-      console.log(`[ContainerManager] Connected to Docker via proxy at ${dockerHost}`);
+      logger.info(`Connected to Docker via proxy at ${dockerHost}`);
     } else {
       // Direct socket connection (legacy/local development)
       this.docker = new Docker({ socketPath: dockerHost });
-      console.log(`[ContainerManager] Connected to Docker via socket at ${dockerHost}`);
+      logger.info(`Connected to Docker via socket at ${dockerHost}`);
     }
   }
 
@@ -99,13 +100,18 @@ class ContainerManager {
 
       this.sessions.set(sessionId, session);
 
-      console.log(
-        `[ContainerManager] Created container ${containerName} for user ${userId} (env: ${environment})`
-      );
+      logger.info(`Created container ${containerName} for user ${userId}`, {
+        environment,
+        containerId: container.id,
+      });
 
       return session;
     } catch (error) {
-      console.error(`[ContainerManager] Failed to create container:`, error);
+      logger.error('Failed to create container', {
+        userId,
+        environment,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new Error(`Failed to create container: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -117,7 +123,7 @@ class ContainerManager {
     try {
       const volume = this.docker.getVolume(volumeName);
       await volume.inspect();
-      console.log(`[ContainerManager] Volume ${volumeName} already exists`);
+      logger.debug(`Volume ${volumeName} already exists`);
     } catch (error) {
       // Volume doesn't exist, create it
       try {
@@ -127,9 +133,12 @@ class ContainerManager {
             'web-shell.persistent': 'true',
           },
         });
-        console.log(`[ContainerManager] Created volume ${volumeName}`);
+        logger.info(`Created volume ${volumeName}`);
       } catch (createError) {
-        console.error(`[ContainerManager] Failed to create volume:`, createError);
+        logger.error('Failed to create volume', {
+          volumeName,
+          error: createError instanceof Error ? createError.message : String(createError),
+        });
         throw createError;
       }
     }
@@ -180,16 +189,14 @@ class ContainerManager {
 
       this.sessions.delete(sessionId);
 
-      console.log(
-        `[ContainerManager] Terminated container ${session.containerName}`
-      );
+      logger.info(`Terminated container ${session.containerName}`, { sessionId });
 
       return true;
     } catch (error) {
-      console.error(
-        `[ContainerManager] Failed to terminate container ${session.containerName}:`,
-        error
-      );
+      logger.error(`Failed to terminate container ${session.containerName}`, {
+        sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Remove from sessions even if stop failed
       this.sessions.delete(sessionId);
       return false;
@@ -214,9 +221,10 @@ class ContainerManager {
 
     for (const [sessionId, session] of this.sessions) {
       if (now - session.lastActivity > timeout) {
-        console.log(
-          `[ContainerManager] Cleaning up idle container ${session.containerName}`
-        );
+        logger.info(`Cleaning up idle container ${session.containerName}`, {
+          sessionId,
+          idleMinutes: Math.floor((now - session.lastActivity) / 60000),
+        });
         await this.terminateContainer(sessionId);
       }
     }
@@ -237,7 +245,9 @@ class ContainerManager {
       await this.docker.ping();
       return true;
     } catch (error) {
-      console.error('[ContainerManager] Docker connection failed:', error);
+      logger.error('Docker connection failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   }
@@ -253,7 +263,9 @@ class ContainerManager {
         .flatMap((img) => img.RepoTags!)
         .filter((tag) => tag.startsWith('web-shell-backend:'));
     } catch (error) {
-      console.error('[ContainerManager] Failed to list images:', error);
+      logger.error('Failed to list images', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return [];
     }
   }
@@ -282,7 +294,7 @@ class ContainerManager {
   ): Promise<void> {
     const imageName = `web-shell-backend:${environment}`;
 
-    console.log(`[ContainerManager] Building image ${imageName}...`);
+    logger.info(`Building image ${imageName}...`);
 
     try {
       // Import tar module for creating build context
@@ -312,10 +324,12 @@ class ContainerManager {
           stream,
           (err, res) => {
             if (err) {
-              console.error(`[ContainerManager] Build failed for ${imageName}:`, err);
+              logger.error(`Build failed for ${imageName}`, {
+                error: err instanceof Error ? err.message : String(err),
+              });
               reject(err);
             } else {
-              console.log(`[ContainerManager] Successfully built ${imageName}`);
+              logger.info(`Successfully built ${imageName}`);
               resolve();
             }
           },
@@ -329,13 +343,15 @@ class ContainerManager {
             if (event.stream) {
               process.stdout.write(event.stream);
             } else if (event.status) {
-              console.log(`[Build] ${event.status} ${event.progress || ''}`);
+              logger.debug(`Build: ${event.status} ${event.progress || ''}`);
             }
           }
         );
       });
     } catch (error) {
-      console.error(`[ContainerManager] Failed to build image ${imageName}:`, error);
+      logger.error(`Failed to build image ${imageName}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new Error(`Failed to build image: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -351,11 +367,11 @@ class ContainerManager {
 
     const exists = await this.imageExists(imageName);
     if (exists) {
-      console.log(`[ContainerManager] Image ${imageName} already exists`);
+      logger.debug(`Image ${imageName} already exists`);
       return true;
     }
 
-    console.log(`[ContainerManager] Image ${imageName} not found, building...`);
+    logger.info(`Image ${imageName} not found, building...`);
     await this.buildImage(environment, onProgress);
     return true;
   }

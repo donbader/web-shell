@@ -2,6 +2,7 @@ import Docker from 'dockerode';
 import { TerminalSession } from '../types/index.js';
 import config from '../config/config.js';
 import containerManager from './containerManager.js';
+import logger from '../utils/logger.js';
 
 class PTYManager {
   private sessions: Map<string, TerminalSession> = new Map();
@@ -53,7 +54,9 @@ class PTYManager {
       try {
         await exec.resize({ h: rows, w: cols });
       } catch (resizeError) {
-        console.warn(`[PTYManager] Failed to resize TTY:`, resizeError);
+        logger.warn('Failed to resize TTY', {
+          error: resizeError instanceof Error ? resizeError.message : String(resizeError),
+        });
       }
 
       const session: TerminalSession = {
@@ -75,13 +78,19 @@ class PTYManager {
 
       this.sessions.set(sessionId, session);
 
-      console.log(
-        `[PTYManager] Created session ${sessionId} for user ${userId} (container: ${containerSession.containerName}, env: ${env})`
-      );
+      logger.info(`Created PTY session ${sessionId} for user ${userId}`, {
+        containerName: containerSession.containerName,
+        environment: env,
+      });
 
       return session;
     } catch (error) {
-      console.error(`[PTYManager] Failed to create session:`, error);
+      logger.error('Failed to create PTY session', {
+        userId,
+        sessionId,
+        environment: env,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new Error(`Failed to create terminal session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -122,7 +131,9 @@ class PTYManager {
 
       return true;
     } catch (error) {
-      console.error(`[PTYManager] Failed to resize session ${sessionId}:`, error);
+      logger.error(`Failed to resize session ${sessionId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   }
@@ -138,7 +149,9 @@ class PTYManager {
       this.updateActivity(sessionId);
       return true;
     } catch (error) {
-      console.error(`[PTYManager] Failed to write to session ${sessionId}:`, error);
+      logger.error(`Failed to write to session ${sessionId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   }
@@ -160,11 +173,13 @@ class PTYManager {
 
       this.sessions.delete(sessionId);
 
-      console.log(`[PTYManager] Terminated session ${sessionId}`);
+      logger.info(`Terminated PTY session ${sessionId}`);
 
       return true;
     } catch (error) {
-      console.error(`[PTYManager] Failed to terminate session ${sessionId}:`, error);
+      logger.error(`Failed to terminate session ${sessionId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
       this.sessions.delete(sessionId);
       return false;
     }
@@ -180,7 +195,9 @@ class PTYManager {
 
     for (const [sessionId, session] of this.sessions) {
       if (now - session.lastActivity > timeout) {
-        console.log(`[PTYManager] Cleaning up idle session ${sessionId}`);
+        logger.info(`Cleaning up idle PTY session ${sessionId}`, {
+          idleMinutes: Math.floor((now - session.lastActivity) / 60000),
+        });
         await this.terminateSession(sessionId);
       }
     }

@@ -23,6 +23,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "tar": "^7.5.2",
+    "winston": "^3.18.3",
+    "winston-daily-rotate-file": "^5.0.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {

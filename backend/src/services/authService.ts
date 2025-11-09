@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import config from '../config/config.js';
 import { User, AuthTokenPayload, Session } from '../types/index.js';
 import { randomUUID } from 'crypto';
+import logger from '../utils/logger.js';
 
 // In-memory user store (replace with database in production)
 // Passwords are hashed with bcrypt
@@ -34,7 +35,7 @@ export function initializeDefaultUser(): void {
     passwordHash,
   });
 
-  console.log(`[Auth] Default user created: ${defaultUsername}`);
+  logger.info(`Default user created: ${defaultUsername}`);
 }
 
 /**
@@ -144,7 +145,7 @@ export function cleanupExpiredSessions(): void {
   }
 
   if (cleaned > 0) {
-    console.log(`[Auth] Cleaned up ${cleaned} expired sessions`);
+    logger.info(`Cleaned up ${cleaned} expired sessions`);
   }
 }
 

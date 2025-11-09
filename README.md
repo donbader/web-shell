@@ -44,7 +44,7 @@ docker compose up -d
 
 **Access**: http://localhost:3377
 
-See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
+See [Docker Deployment Guide](docs/deployment/docker-deployment.md) for detailed Docker documentation.
 
 ## Using the Terminal
 
@@ -118,9 +118,12 @@ docker compose -f docker-compose.dev.yml exec frontend sh
 
 ## Documentation
 
-- [DEVELOPMENT.md](DEVELOPMENT.md) - Development guide and best practices
-- [DOCKER.md](DOCKER.md) - Complete Docker documentation
-- [backend/ENVIRONMENTS.md](backend/ENVIRONMENTS.md) - Shell environment details
+- [Complete Documentation](docs/README.md) - Full documentation index
+- [Development Guide](docs/development/DEVELOPMENT.md) - Development guide and best practices
+- [Docker Deployment](docs/deployment/docker-deployment.md) - Complete Docker documentation
+- [Security Audit](SECURITY_AUDIT.md) - Security review and findings
+- [Quick Reference](docs/user-guide/QUICK_REFERENCE.md) - Common commands and usage
+- [Shell Environments](backend/ENVIRONMENTS.md) - Shell environment details
 
 ## Environment Variables
 
@@ -178,7 +181,7 @@ docker compose -f docker-compose.dev.yml build --no-cache
 ./start.sh
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for comprehensive troubleshooting guide.
+See [Development Guide](docs/development/DEVELOPMENT.md) for comprehensive troubleshooting guide.
 
 ## License
 
