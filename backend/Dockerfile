@@ -149,10 +149,9 @@ COPY . .
 COPY environments/default/.zshrc /root/.zshrc
 COPY environments/default/.bashrc /root/.bashrc
 
-# Set ownership to existing node user (UID 1000)
-RUN chown -R node:node /app
-
 # Switch to non-root user
+# Note: In dev mode with volume mounts, host permissions apply
+# No chown needed as ./backend:/app mount overrides ownership
 USER node
 
 EXPOSE 3366
