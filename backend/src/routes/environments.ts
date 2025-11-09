@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getAllEnvironments, getEnvironmentMetadata, compareEnvironments } from '../config/environments';
+import { getAllEnvironments, getEnvironmentMetadata, compareEnvironments } from '../config/environments.js';
 import logger from '../utils/logger.js';
 
 const router = Router();
