@@ -121,9 +121,9 @@ docker compose -f docker-compose.dev.yml exec frontend sh
 - [Complete Documentation](docs/README.md) - Full documentation index
 - [Development Guide](docs/development/DEVELOPMENT.md) - Development guide and best practices
 - [Docker Deployment](docs/deployment/docker-deployment.md) - Complete Docker documentation
-- [Security Audit](SECURITY_AUDIT.md) - Security review and findings
+- [Security Audit](docs/architecture/SECURITY_AUDIT.md) - Security review and findings
 - [Quick Reference](docs/user-guide/QUICK_REFERENCE.md) - Common commands and usage
-- [Shell Environments](backend/ENVIRONMENTS.md) - Shell environment details
+- [Shell Environments](docs/architecture/shell-environments.md) - Shell environment details
 
 ## Environment Variables
 
