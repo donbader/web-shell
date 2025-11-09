@@ -2,13 +2,16 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: dev
     container_name: web-shell-backend-dev
     ports:
       - "3366:3366"
     volumes:
       - ./backend:/app
       - backend-node-modules:/app/node_modules
+      # Mount Docker socket for Docker-in-Docker (DinD)
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - NODE_ENV=development
       - PORT=3366
@@ -16,12 +19,16 @@ services:
       - CORS_ORIGINS=http://localhost:5173
       - MAX_SESSIONS_PER_USER=10
       - IDLE_TIMEOUT_MINUTES=60
+      # Docker socket path
+      - DOCKER_HOST=unix:///var/run/docker.sock
     command: npm run dev
     restart: unless-stopped
     networks:
       - web-shell-network
     stdin_open: true
     tty: true
+    # Allow backend to manage Docker containers
+    privileged: false  # Not needed with socket mount
 
   frontend:
     build:

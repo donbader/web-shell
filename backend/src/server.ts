@@ -99,7 +99,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   let session: any = null;
 
   // Handle WebSocket messages
-  ws.on('message', (message: Buffer) => {
+  ws.on('message', async (message: Buffer) => {
     try {
       const msg = JSON.parse(message.toString()) as WebSocketMessage;
 
@@ -107,7 +107,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         case 'create-session':
           // Create terminal session with requested shell/environment
           sessionId = randomUUID();
-          session = ptyManager.createSession(
+          session = await ptyManager.createSession(
             userId,
             sessionId,
             msg.cols || 80,
@@ -122,24 +122,24 @@ wss.on('connection', (ws: WebSocket, req) => {
             sessionId,
           } as WebSocketResponse));
 
-          // Forward PTY output to WebSocket
-          session.ptyProcess.onData((data: string) => {
+          // Forward Docker stream output to WebSocket
+          session.ptyProcess.on('data', (data: Buffer) => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({
                 type: 'output',
                 sessionId,
-                data,
+                data: data.toString('utf-8'),
               } as WebSocketResponse));
             }
           });
 
-          // Handle PTY process exit
-          session.ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
-            console.log(`[PTY] Process exited: code=${exitCode}, signal=${signal}`);
+          // Handle stream close
+          session.ptyProcess.on('end', () => {
+            console.log(`[PTY] Stream ended for session ${sessionId}`);
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({
                 type: 'error',
-                error: `Terminal process exited with code ${exitCode}`,
+                error: 'Terminal session ended',
               } as WebSocketResponse));
             }
             ptyManager.terminateSession(sessionId);

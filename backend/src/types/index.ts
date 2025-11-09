@@ -13,11 +13,15 @@ export interface Session {
 }
 
 export interface TerminalSession extends Session {
-  ptyProcess: any; // node-pty IPty type
+  ptyProcess: any; // node-pty IPty type or Docker stream
   cols: number;
   rows: number;
   shell: string; // Shell path (e.g., /bin/zsh, /bin/bash)
   environment: string; // Environment name (e.g., default, minimal)
+  // Docker-specific fields
+  containerId?: string; // Docker container ID
+  containerName?: string; // Docker container name
+  volumeName?: string; // Persistent volume name
 }
 
 export interface WebSocketMessage {

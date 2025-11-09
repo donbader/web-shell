@@ -14,13 +14,14 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@types/dockerode": "^3.3.45",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dockerode": "^4.0.9",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "node-pty": "^1.0.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {

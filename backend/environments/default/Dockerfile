@@ -49,7 +49,8 @@ COPY --from=builder /app/dist ./dist
 COPY environments/minimal/.zshrc /home/node/.zshrc
 COPY environments/minimal/.bashrc /home/node/.bashrc
 
-RUN chown -R node:node /home/node
+# Create workspace directory and set ownership
+RUN mkdir -p /workspace && chown -R node:node /home/node /workspace
 
 USER node
 
@@ -84,7 +85,8 @@ ENV ENVIRONMENT=default
 COPY environments/default/.zshrc /home/node/.zshrc
 COPY environments/default/.bashrc /home/node/.bashrc
 
-RUN chown -R node:node /home/node
+# Ensure workspace ownership (inherited from minimal but ensure it's correct)
+RUN chown -R node:node /home/node /workspace
 
 # Switch back to non-root user
 USER node
@@ -93,6 +95,46 @@ USER node
 # - EXPOSE 3366
 # - HEALTHCHECK
 # - CMD ["node", "dist/server.js"]
+
+# ============================================
+# STAGE 4: Development Environment
+# ============================================
+FROM node:20-alpine AS dev
+
+# Build arguments for cache invalidation
+ARG ENV_CONFIG_VERSION=1
+ARG SOURCE_VERSION=1
+
+# Install system dependencies for development
+RUN apk add --no-cache \
+    python3 make g++ \
+    zsh bash \
+    git curl \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies (including dev dependencies for tsx)
+RUN npm install
+
+# Copy source code (cache invalidation)
+ARG SOURCE_VERSION
+RUN echo "Source version: ${SOURCE_VERSION}"
+COPY . .
+
+# Copy shell configurations (cache invalidation)
+ARG ENV_CONFIG_VERSION
+RUN echo "Environment config version: ${ENV_CONFIG_VERSION}"
+COPY environments/default/.zshrc /root/.zshrc
+COPY environments/default/.bashrc /root/.bashrc
+
+EXPOSE 3366
+
+# Start development server with tsx watch
+CMD ["npm", "run", "dev"]
 
 # ============================================
 # FINAL: Select environment based on build arg

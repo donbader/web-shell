@@ -67,12 +67,46 @@ echo "   Source code version: ${SOURCE_VERSION:0:12}..."
 # Build images with version arguments (Docker will use cache if versions match)
 echo ""
 echo "🔨 Building Docker images with smart caching..."
+
+# Build development backend image
 if ! docker compose -f docker-compose.dev.yml build \
     --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
     --build-arg SOURCE_VERSION=$SOURCE_VERSION; then
     echo "❌ Build failed. Please check the error messages above."
     exit 1
 fi
+
+# Build production images for both environments (used by containers spawned by backend)
+echo ""
+echo "🔨 Building terminal environment images..."
+
+# Build minimal image
+echo "   Building minimal environment..."
+if ! docker build \
+    --build-arg ENVIRONMENT=minimal \
+    --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
+    -t web-shell-backend:minimal \
+    -f backend/Dockerfile \
+    --target minimal \
+    ./backend > /dev/null; then
+    echo "❌ Failed to build minimal image"
+    exit 1
+fi
+
+# Build default image
+echo "   Building default environment..."
+if ! docker build \
+    --build-arg ENVIRONMENT=default \
+    --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
+    -t web-shell-backend:default \
+    -f backend/Dockerfile \
+    --target default \
+    ./backend > /dev/null; then
+    echo "❌ Failed to build default image"
+    exit 1
+fi
+
+echo "✅ All images built successfully"
 
 # Start services
 echo ""
