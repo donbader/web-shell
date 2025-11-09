@@ -105,10 +105,6 @@ export function Login({ onLoginSuccess }: LoginProps) {
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
-
-          <div className="login-info">
-            <p>Default credentials: <code>admin</code> / <code>admin123</code></p>
-          </div>
         </form>
       </div>
     </div>
