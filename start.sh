@@ -49,64 +49,16 @@ echo ""
 echo "🧹 Cleaning up existing containers and volumes..."
 docker compose -f docker-compose.dev.yml down -v 2>/dev/null || true
 
-# Calculate version hashes using git for smart cache invalidation
+# Build development backend and frontend images only
 echo ""
-echo "🔍 Checking for file changes..."
-
-# Use git hash of environment config files to detect changes
-ENV_FILES="backend/environments/default/.zshrc backend/environments/default/.bashrc backend/environments/minimal/.zshrc backend/environments/minimal/.bashrc"
-ENV_CONFIG_VERSION=$(git log -1 --format="%H" -- $ENV_FILES 2>/dev/null | head -1 || echo "dev-$(cat $ENV_FILES 2>/dev/null | md5sum | cut -d' ' -f1)")
-
-# Use git hash of source files that affect runtime behavior
-SOURCE_FILES="backend/src/services/ptyManager.ts backend/src/config/environments.ts backend/src/routes/environments.ts"
-SOURCE_VERSION=$(git log -1 --format="%H" -- $SOURCE_FILES 2>/dev/null | head -1 || echo "dev-$(cat $SOURCE_FILES 2>/dev/null | md5sum | cut -d' ' -f1)")
-
-echo "   Environment config version: ${ENV_CONFIG_VERSION:0:12}..."
-echo "   Source code version: ${SOURCE_VERSION:0:12}..."
-
-# Build images with version arguments (Docker will use cache if versions match)
-echo ""
-echo "🔨 Building Docker images with smart caching..."
-
-# Build development backend image
-if ! docker compose -f docker-compose.dev.yml build \
-    --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
-    --build-arg SOURCE_VERSION=$SOURCE_VERSION; then
+echo "🔨 Building development images..."
+if ! docker compose -f docker-compose.dev.yml build; then
     echo "❌ Build failed. Please check the error messages above."
     exit 1
 fi
 
-# Build production images for both environments (used by containers spawned by backend)
-echo ""
-echo "🔨 Building terminal environment images..."
-
-# Build minimal image
-echo "   Building minimal environment..."
-if ! docker build \
-    --build-arg ENVIRONMENT=minimal \
-    --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
-    -t web-shell-backend:minimal \
-    -f backend/Dockerfile \
-    --target minimal \
-    ./backend > /dev/null; then
-    echo "❌ Failed to build minimal image"
-    exit 1
-fi
-
-# Build default image
-echo "   Building default environment..."
-if ! docker build \
-    --build-arg ENVIRONMENT=default \
-    --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
-    -t web-shell-backend:default \
-    -f backend/Dockerfile \
-    --target default \
-    ./backend > /dev/null; then
-    echo "❌ Failed to build default image"
-    exit 1
-fi
-
-echo "✅ All images built successfully"
+echo "✅ Development images built successfully"
+echo "ℹ️  Terminal environment images will be built on-demand when first requested"
 
 # Start services
 echo ""

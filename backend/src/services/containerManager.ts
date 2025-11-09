@@ -243,6 +243,108 @@ class ContainerManager {
       return [];
     }
   }
+
+  /**
+   * Check if an image exists
+   */
+  async imageExists(imageName: string): Promise<boolean> {
+    try {
+      const image = this.docker.getImage(imageName);
+      await image.inspect();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Build a terminal environment image with progress streaming
+   * @param environment - 'minimal' or 'default'
+   * @param onProgress - Callback for build progress updates
+   */
+  async buildImage(
+    environment: string,
+    onProgress?: (data: { stream?: string; status?: string; progress?: string }) => void
+  ): Promise<void> {
+    const imageName = `web-shell-backend:${environment}`;
+
+    console.log(`[ContainerManager] Building image ${imageName}...`);
+
+    try {
+      // Import tar module for creating build context
+      const tar = await import('tar');
+
+      // Create tar stream of the backend directory
+      const tarStream = tar.c(
+        {
+          gzip: false,
+          cwd: '/app', // Current working directory in dev container
+        },
+        ['.'] // Include all files from current directory
+      );
+
+      // Build the image - cast tar stream to unknown then to NodeJS.ReadableStream
+      const stream = await this.docker.buildImage(tarStream as unknown as NodeJS.ReadableStream, {
+        t: imageName,
+        target: environment,
+        buildargs: {
+          ENVIRONMENT: environment,
+        },
+      });
+
+      // Process the stream
+      await new Promise<void>((resolve, reject) => {
+        this.docker.modem.followProgress(
+          stream,
+          (err, res) => {
+            if (err) {
+              console.error(`[ContainerManager] Build failed for ${imageName}:`, err);
+              reject(err);
+            } else {
+              console.log(`[ContainerManager] Successfully built ${imageName}`);
+              resolve();
+            }
+          },
+          (event) => {
+            // Forward progress events to callback
+            if (onProgress) {
+              onProgress(event);
+            }
+
+            // Log progress to console
+            if (event.stream) {
+              process.stdout.write(event.stream);
+            } else if (event.status) {
+              console.log(`[Build] ${event.status} ${event.progress || ''}`);
+            }
+          }
+        );
+      });
+    } catch (error) {
+      console.error(`[ContainerManager] Failed to build image ${imageName}:`, error);
+      throw new Error(`Failed to build image: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Ensure image exists, build if necessary
+   */
+  async ensureImageExists(
+    environment: string,
+    onProgress?: (data: { stream?: string; status?: string; progress?: string }) => void
+  ): Promise<boolean> {
+    const imageName = `web-shell-backend:${environment}`;
+
+    const exists = await this.imageExists(imageName);
+    if (exists) {
+      console.log(`[ContainerManager] Image ${imageName} already exists`);
+      return true;
+    }
+
+    console.log(`[ContainerManager] Image ${imageName} not found, building...`);
+    await this.buildImage(environment, onProgress);
+    return true;
+  }
 }
 
 export default new ContainerManager();

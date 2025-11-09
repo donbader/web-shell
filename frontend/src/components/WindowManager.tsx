@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { TerminalWindow } from './TerminalWindow';
 import { EnvironmentSelector } from './EnvironmentSelector';
+import { ImageBuildModal } from './ImageBuildModal';
 import type { EnvironmentConfig } from './EnvironmentSelector';
 import { generateUUID } from '../utils/uuid';
+import { ensureImage } from '../services/imageService';
+import type { BuildProgress } from '../services/imageService';
 import './WindowManager.css';
 
 const STORAGE_KEY = 'web-shell-windows';
@@ -26,6 +29,12 @@ interface WindowManagerProps {
 
 export function WindowManager({ wsUrl }: WindowManagerProps) {
   const [showEnvironmentSelector, setShowEnvironmentSelector] = useState(false);
+  const [showBuildModal, setShowBuildModal] = useState(false);
+  const [buildEnvironment, setBuildEnvironment] = useState<string>('');
+  const [buildProgress, setBuildProgress] = useState<BuildProgress | null>(null);
+  const [pendingConfig, setPendingConfig] = useState<EnvironmentConfig | null>(null);
+  const [imagesReady, setImagesReady] = useState(false);
+
   const [state, setState] = useState<WindowManagerState>(() => {
     // Load from localStorage on mount
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -55,11 +64,87 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Check and build images for existing terminals on mount
+  useEffect(() => {
+    const checkExistingImages = async () => {
+      // Get unique environments from existing windows
+      const environments = new Set(
+        state.windows.map(w => w.environment || 'default')
+      );
+
+      // Check and build each environment
+      for (const env of environments) {
+        try {
+          await ensureImage(env, (progress) => {
+            if (progress.status === 'building' || progress.status === 'starting') {
+              setBuildEnvironment(env);
+              setBuildProgress(progress);
+              setShowBuildModal(true);
+            } else if (progress.status === 'completed') {
+              setTimeout(() => {
+                setShowBuildModal(false);
+                setBuildProgress(null);
+              }, 1500);
+            } else if (progress.status === 'error') {
+              setBuildProgress(progress);
+            }
+          });
+        } catch (error) {
+          console.error(`[WindowManager] Error ensuring image for ${env}:`, error);
+        }
+      }
+
+      // All images are ready, allow terminals to render
+      setImagesReady(true);
+    };
+
+    checkExistingImages();
+  }, []); // Run only on mount
+
   const addWindow = () => {
     setShowEnvironmentSelector(true);
   };
 
-  const createWindowWithConfig = (config: EnvironmentConfig) => {
+  const createWindowWithConfig = async (config: EnvironmentConfig) => {
+    const environment = config.environment || 'default';
+
+    // Check if image exists, build if necessary
+    try {
+      setShowEnvironmentSelector(false);
+      setBuildEnvironment(environment);
+      setShowBuildModal(true);
+      setPendingConfig(config);
+
+      // Ensure image exists, building if necessary
+      await ensureImage(environment, (progress) => {
+        setBuildProgress(progress);
+
+        // Auto-close modal and create window when build completes
+        if (progress.status === 'completed') {
+          setTimeout(() => {
+            setShowBuildModal(false);
+            setBuildProgress(null);
+            actuallyCreateWindow(config);
+          }, 1500); // Give user time to see success message
+        }
+      });
+
+      // If image already existed (no build needed), create window immediately
+      if (!buildProgress || buildProgress.status === 'completed') {
+        setShowBuildModal(false);
+        setBuildProgress(null);
+        actuallyCreateWindow(config);
+      }
+    } catch (error) {
+      console.error('[WindowManager] Error ensuring image:', error);
+      setBuildProgress({
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Failed to prepare image',
+      });
+    }
+  };
+
+  const actuallyCreateWindow = (config: EnvironmentConfig) => {
     const newWindow: TerminalWindowData = {
       id: generateUUID(),
       title: `Terminal ${state.windows.length + 1}`,
@@ -73,7 +158,14 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       activeWindowId: newWindow.id,
     }));
 
-    setShowEnvironmentSelector(false);
+    setPendingConfig(null);
+  };
+
+  const closeBuildModal = () => {
+    setShowBuildModal(false);
+    setBuildProgress(null);
+    setBuildEnvironment('');
+    setPendingConfig(null);
   };
 
   const closeWindow = (id: string) => {
@@ -151,7 +243,7 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       </div>
 
       <div className="terminal-container">
-        {state.windows.map(window => (
+        {imagesReady && state.windows.map(window => (
           <TerminalWindow
             key={window.id}
             windowId={window.id}
@@ -171,6 +263,13 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
           onCancel={() => setShowEnvironmentSelector(false)}
         />
       )}
+
+      <ImageBuildModal
+        environment={buildEnvironment}
+        isOpen={showBuildModal}
+        progress={buildProgress}
+        onClose={closeBuildModal}
+      />
     </div>
   );
 }

@@ -17,9 +17,12 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3377}
       - MAX_SESSIONS_PER_USER=${MAX_SESSIONS_PER_USER:-5}
       - IDLE_TIMEOUT_MINUTES=${IDLE_TIMEOUT_MINUTES:-30}
+      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
       # Optional: Mount host directory for persistent session data
       - backend-data:/app/data
+      # Mount Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - web-shell-network
     healthcheck:

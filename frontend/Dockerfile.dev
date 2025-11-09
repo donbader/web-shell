@@ -1,16 +1,27 @@
+# syntax=docker/dockerfile:1
 # Development Dockerfile for Web Shell Frontend
+# Optimized for development with better caching
+
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for better layer caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with caching
+RUN npm install && \
+    npm cache clean --force
 
-# Copy source code
+# Copy source code (separate layer for better rebuild performance)
 COPY . .
+
+# Create non-root user for development
+RUN addgroup -g 1000 devuser && \
+    adduser -D -u 1000 -G devuser devuser && \
+    chown -R devuser:devuser /app
+
+USER devuser
 
 # Expose Vite dev server port
 EXPOSE 5173

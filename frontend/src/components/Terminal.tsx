@@ -62,7 +62,11 @@ export function TerminalComponent({ wsUrl, shell, environment }: TerminalCompone
 
     // Open terminal
     terminal.open(terminalRef.current);
-    fitAddon.fit();
+
+    // Fit terminal after a brief delay to ensure DOM is ready
+    setTimeout(() => {
+      fitAddon.fit();
+    }, 0);
 
     // Store references
     xtermRef.current = terminal;

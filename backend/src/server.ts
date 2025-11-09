@@ -8,6 +8,7 @@ import ptyManager from './services/ptyManager.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import environmentRoutes from './routes/environments.js';
+import imageRoutes from './routes/images.js';
 import {
   initializeDefaultUser,
   verifyToken,
@@ -40,6 +41,9 @@ app.use('/api/auth', authRoutes);
 
 // Environment metadata routes (public)
 app.use('/api/environments', environmentRoutes);
+
+// Image management routes (public for checking, can add auth later if needed)
+app.use('/api/images', imageRoutes);
 
 // API routes with auth
 app.get('/api/sessions', authMiddleware, (req, res) => {
