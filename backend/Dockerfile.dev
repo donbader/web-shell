@@ -19,6 +19,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Copy shell configurations for both environments
+COPY environments/default/.zshrc /root/.zshrc
+COPY environments/default/.bashrc /root/.bashrc
+
 # Expose backend port
 EXPOSE 3366
 

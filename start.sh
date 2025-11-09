@@ -49,10 +49,11 @@ echo ""
 echo "🧹 Cleaning up existing containers and volumes..."
 docker compose -f docker-compose.dev.yml down -v 2>/dev/null || true
 
-# Build images (this ensures dependencies are installed)
+# Build images (this ensures dependencies and code changes are included)
 echo ""
 echo "🔨 Building Docker images (this may take a minute)..."
-if ! docker compose -f docker-compose.dev.yml build; then
+echo "   Using --no-cache to ensure latest code is included..."
+if ! docker compose -f docker-compose.dev.yml build --no-cache; then
     echo "❌ Build failed. Please check the error messages above."
     exit 1
 fi

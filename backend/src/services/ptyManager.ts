@@ -44,7 +44,7 @@ class PTYManager {
       env: {
         ...process.env,
         TERM: 'xterm-256color',
-        SHELL_ENVIRONMENT: environment || 'default', // For future use
+        ENVIRONMENT: environment || 'default', // Used in shell prompt
       } as any,
     });
 
