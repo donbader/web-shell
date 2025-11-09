@@ -49,11 +49,27 @@ echo ""
 echo "🧹 Cleaning up existing containers and volumes..."
 docker compose -f docker-compose.dev.yml down -v 2>/dev/null || true
 
-# Build images (this ensures dependencies and code changes are included)
+# Calculate version hashes using git for smart cache invalidation
 echo ""
-echo "🔨 Building Docker images (this may take a minute)..."
-echo "   Using --no-cache to ensure latest code is included..."
-if ! docker compose -f docker-compose.dev.yml build --no-cache; then
+echo "🔍 Checking for file changes..."
+
+# Use git hash of environment config files to detect changes
+ENV_FILES="backend/environments/default/.zshrc backend/environments/default/.bashrc backend/environments/minimal/.zshrc backend/environments/minimal/.bashrc"
+ENV_CONFIG_VERSION=$(git log -1 --format="%H" -- $ENV_FILES 2>/dev/null | head -1 || echo "dev-$(cat $ENV_FILES 2>/dev/null | md5sum | cut -d' ' -f1)")
+
+# Use git hash of source files that affect runtime behavior
+SOURCE_FILES="backend/src/services/ptyManager.ts backend/src/config/environments.ts backend/src/routes/environments.ts"
+SOURCE_VERSION=$(git log -1 --format="%H" -- $SOURCE_FILES 2>/dev/null | head -1 || echo "dev-$(cat $SOURCE_FILES 2>/dev/null | md5sum | cut -d' ' -f1)")
+
+echo "   Environment config version: ${ENV_CONFIG_VERSION:0:12}..."
+echo "   Source code version: ${SOURCE_VERSION:0:12}..."
+
+# Build images with version arguments (Docker will use cache if versions match)
+echo ""
+echo "🔨 Building Docker images with smart caching..."
+if ! docker compose -f docker-compose.dev.yml build \
+    --build-arg ENV_CONFIG_VERSION=$ENV_CONFIG_VERSION \
+    --build-arg SOURCE_VERSION=$SOURCE_VERSION; then
     echo "❌ Build failed. Please check the error messages above."
     exit 1
 fi
