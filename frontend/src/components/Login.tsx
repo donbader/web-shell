@@ -5,12 +5,17 @@ interface LoginProps {
   onLoginSuccess: (token: string) => void;
 }
 
-// Construct API URL dynamically based on current host
+// Get API URL from environment variable or construct dynamically
 const getApiUrl = (): string => {
-  const protocol = window.location.protocol; // http: or https:
-  const host = window.location.host; // includes port if present
-  const basePath = '/corey-private-router/web-shell-api';
+  // Use environment variable if provided (development)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
 
+  // Otherwise construct dynamically (production with reverse proxy)
+  const protocol = window.location.protocol;
+  const host = window.location.host;
+  const basePath = '/corey-private-router/web-shell-api';
   return `${protocol}//${host}${basePath}`;
 };
 

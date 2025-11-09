@@ -13,6 +13,7 @@ services:
       VOLUMES: 1        # Create/manage volumes
       NETWORKS: 1       # Network access for containers
       INFO: 1           # Docker info (useful for health checks)
+      POST: 1           # Required for volume/container creation
 
       # Deny dangerous operations
       COMMIT: 0         # Deny container commits

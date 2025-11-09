@@ -60,6 +60,7 @@ certs/
 tmp/
 temp/
 *.tmp
+.playwright-mcp/
 
 # Process tracking
 *.pid

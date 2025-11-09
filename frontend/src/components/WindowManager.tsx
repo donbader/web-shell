@@ -45,11 +45,13 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       }
     }
 
-    // Default: single terminal
+    // Default: single terminal with default zsh shell
     const defaultWindow: TerminalWindowData = {
       id: generateUUID(),
       title: 'Terminal 1',
       createdAt: Date.now(),
+      shell: 'zsh',
+      environment: 'default',
     };
 
     return {
