@@ -152,14 +152,21 @@ Environment variables are configured in `docker-compose.yml` for production depl
 
 ⚠️ **Development Mode**: Authentication is disabled for local development.
 
+**Security Features** (Phase 1-4):
+- ✅ **HTTP Security Headers** - Helmet.js protection against XSS, clickjacking, MIME-sniffing
+- ✅ **WebSocket Input Validation** - All inputs sanitized with whitelists and size limits
+- ✅ **Container Resource Limits** - 512MB RAM, 1.0 CPU, 100 processes per container
+- ✅ **Rate Limiting** - 5 login attempts per 15 minutes, brute-force protection
+- ✅ **Password Authentication** - bcrypt hashing, JWT tokens, secure sessions
+- ✅ **Docker Socket Proxy** - Isolated Docker access with minimal permissions
+
 **For Production**:
 - Enable authentication (`AUTH_ENABLED=true`)
 - Change default password (`DEFAULT_PASSWORD=your-secure-password`)
 - Use HTTPS/WSS
 - Configure reverse proxy (nginx/Traefik)
-- Set resource limits
-- Review security headers
-- Rate limiting enabled by default (5 attempts per 15 minutes)
+- Review security headers in `PHASE_4_COMPLETION_REPORT.md`
+- Consider stricter CSP (remove `'unsafe-inline'`)
 
 ## Troubleshooting
 

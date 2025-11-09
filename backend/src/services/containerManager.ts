@@ -77,6 +77,11 @@ class ContainerManager {
           AutoRemove: true,
           // Network mode to communicate with backend
           NetworkMode: 'web-shell_web-shell-network',
+          // Resource limits for security and stability
+          Memory: 512 * 1024 * 1024, // 512MB memory limit
+          MemorySwap: 512 * 1024 * 1024, // Disable swap (same as Memory)
+          NanoCpus: 1000000000, // 1.0 CPU cores (1 billion nanoseconds)
+          PidsLimit: 100, // Limit number of processes
         },
         Labels: {
           'web-shell.user': userId,

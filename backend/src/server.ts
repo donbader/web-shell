@@ -5,6 +5,7 @@ import { readFileSync } from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import config from './config/config.js';
 import { validateEnvironment, logConfiguration } from './config/validation.js';
 import ptyManager from './services/ptyManager.js';
@@ -20,6 +21,14 @@ import {
 import { WebSocketMessage, WebSocketResponse } from './types/index.js';
 import { randomUUID } from 'crypto';
 import logger from './utils/logger.js';
+import {
+  validateWebSocketMessage,
+  validateTerminalDimensions,
+  validateShell,
+  validateEnvironment as validateWsEnvironment,
+  validateInputData,
+  logValidationFailure,
+} from './utils/websocketValidation.js';
 
 // Validate environment configuration at startup
 validateEnvironment();
@@ -75,6 +84,24 @@ if (config.authEnabled) {
 }
 
 // Middleware
+// Security headers with Helmet.js
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for React
+      styleSrc: ["'self'", "'unsafe-inline'"],  // Allow inline styles
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:"],     // Allow WebSocket connections
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: config.useHttps ? [] : null, // Only enforce HTTPS upgrade in production
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable for development compatibility
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow CORS
+}));
+
 app.use(cors({ origin: config.corsOrigins, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -155,17 +182,63 @@ wss.on('connection', (ws: WebSocket, req) => {
     try {
       const msg = JSON.parse(message.toString()) as WebSocketMessage;
 
+      // Validate message structure
+      const msgValidation = validateWebSocketMessage(msg);
+      if (!msgValidation.valid) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          error: msgValidation.error,
+        } as WebSocketResponse));
+        return;
+      }
+
       switch (msg.type) {
-        case 'create-session':
-          // Create terminal session with requested shell/environment
+        case 'create-session': {
+          // Validate terminal dimensions
+          const dimsValidation = validateTerminalDimensions(
+            msg.cols || 80,
+            msg.rows || 24
+          );
+          if (!dimsValidation.valid) {
+            logValidationFailure('create-session', 'cols/rows', dimsValidation.error!, msg);
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: dimsValidation.error,
+            } as WebSocketResponse));
+            return;
+          }
+
+          // Validate shell
+          const shellValidation = validateShell(msg.shell);
+          if (!shellValidation.valid) {
+            logValidationFailure('create-session', 'shell', shellValidation.error!, msg.shell);
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: shellValidation.error,
+            } as WebSocketResponse));
+            return;
+          }
+
+          // Validate environment
+          const envValidation = validateWsEnvironment(msg.environment);
+          if (!envValidation.valid) {
+            logValidationFailure('create-session', 'environment', envValidation.error!, msg.environment);
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: envValidation.error,
+            } as WebSocketResponse));
+            return;
+          }
+
+          // Create terminal session with validated parameters
           sessionId = randomUUID();
           session = await ptyManager.createSession(
             userId,
             sessionId,
-            msg.cols || 80,
-            msg.rows || 24,
-            msg.shell,
-            msg.environment
+            dimsValidation.cols!,
+            dimsValidation.rows!,
+            shellValidation.shell!,
+            envValidation.environment!
           );
 
           // Send session created message
@@ -198,18 +271,47 @@ wss.on('connection', (ws: WebSocket, req) => {
             ws.close();
           });
           break;
+        }
 
-        case 'input':
-          if (msg.data && session) {
-            ptyManager.write(sessionId, msg.data);
+        case 'input': {
+          if (!session) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: 'No active session',
+            } as WebSocketResponse));
+            return;
           }
-          break;
 
-        case 'resize':
-          if (msg.cols && msg.rows) {
-            ptyManager.resize(sessionId, msg.cols, msg.rows);
+          // Validate input data
+          const inputValidation = validateInputData(msg.data);
+          if (!inputValidation.valid) {
+            logValidationFailure('input', 'data', inputValidation.error!, msg.data);
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: inputValidation.error,
+            } as WebSocketResponse));
+            return;
           }
+
+          ptyManager.write(sessionId, inputValidation.data!);
           break;
+        }
+
+        case 'resize': {
+          // Validate resize dimensions
+          const resizeValidation = validateTerminalDimensions(msg.cols, msg.rows);
+          if (!resizeValidation.valid) {
+            logValidationFailure('resize', 'cols/rows', resizeValidation.error!, msg);
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: resizeValidation.error,
+            } as WebSocketResponse));
+            return;
+          }
+
+          ptyManager.resize(sessionId, resizeValidation.cols!, resizeValidation.rows!);
+          break;
+        }
 
         case 'ping':
           ws.send(JSON.stringify({ type: 'pong' } as WebSocketResponse));
