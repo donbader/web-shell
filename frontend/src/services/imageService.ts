@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3366';
+import { getApiUrl } from '../utils/apiUrl';
+
+const API_URL = getApiUrl();
 
 export interface ImageStatus {
   environment: string;

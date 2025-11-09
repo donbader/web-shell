@@ -1,23 +1,10 @@
 import { useState, type FormEvent } from 'react';
+import { getApiUrl } from '../utils/apiUrl';
 import './Login.css';
 
 interface LoginProps {
   onLoginSuccess: (token: string) => void;
 }
-
-// Get API URL from environment variable or construct dynamically
-const getApiUrl = (): string => {
-  // Use environment variable if provided (development)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
-  // Otherwise construct dynamically (production with reverse proxy)
-  const protocol = window.location.protocol;
-  const host = window.location.host;
-  const basePath = '/corey-private-router/web-shell-api';
-  return `${protocol}//${host}${basePath}`;
-};
 
 export function Login({ onLoginSuccess }: LoginProps) {
   const [password, setPassword] = useState('');

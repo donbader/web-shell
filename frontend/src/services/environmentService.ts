@@ -1,6 +1,7 @@
 import type { EnvironmentMetadata, EnvironmentComparison } from '../types/environment';
+import { getApiUrl } from '../utils/apiUrl';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3366';
+const API_BASE = getApiUrl();
 
 /**
  * Fetch all available environments

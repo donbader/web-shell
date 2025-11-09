@@ -1,35 +1,8 @@
 import { useState, useEffect } from 'react';
 import { WindowManager } from './components/WindowManager';
 import { Login } from './components/Login';
+import { getApiUrl, getWebSocketUrl } from './utils/apiUrl';
 import './App.css';
-
-// Get API and WebSocket URLs from environment variables
-// Falls back to dynamic construction for production reverse proxy setup
-const getApiUrl = (): string => {
-  // Use environment variable if provided (development)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
-  // Otherwise construct dynamically (production with reverse proxy)
-  const protocol = window.location.protocol;
-  const host = window.location.host;
-  const basePath = '/corey-private-router/web-shell-api';
-  return `${protocol}//${host}${basePath}`;
-};
-
-const getWebSocketUrl = (): string => {
-  // Use environment variable if provided (development)
-  if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
-  }
-
-  // Otherwise construct dynamically (production with reverse proxy)
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  const basePath = '/corey-private-router/web-shell-api';
-  return `${protocol}//${host}${basePath}`;
-};
 
 const API_URL = getApiUrl();
 const WS_URL = getWebSocketUrl();

@@ -39,7 +39,16 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // Migrate old data: ensure all windows have shell and environment
+        if (parsed.windows) {
+          parsed.windows = parsed.windows.map((w: TerminalWindowData) => ({
+            ...w,
+            shell: w.shell || 'zsh', // Default to zsh if missing
+            environment: w.environment || 'default', // Default to default if missing
+          }));
+        }
+        return parsed;
       } catch (e) {
         console.error('Failed to parse stored window state:', e);
       }
