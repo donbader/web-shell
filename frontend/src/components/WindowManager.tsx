@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TerminalWindow } from './TerminalWindow';
+import { EnvironmentSelector } from './EnvironmentSelector';
+import type { EnvironmentConfig } from './EnvironmentSelector';
 import { generateUUID } from '../utils/uuid';
 import './WindowManager.css';
 
@@ -9,6 +11,8 @@ interface TerminalWindowData {
   id: string;
   title: string;
   createdAt: number;
+  shell?: string;
+  environment?: string;
 }
 
 interface WindowManagerState {
@@ -21,6 +25,7 @@ interface WindowManagerProps {
 }
 
 export function WindowManager({ wsUrl }: WindowManagerProps) {
+  const [showEnvironmentSelector, setShowEnvironmentSelector] = useState(false);
   const [state, setState] = useState<WindowManagerState>(() => {
     // Load from localStorage on mount
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -51,16 +56,24 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
   }, [state]);
 
   const addWindow = () => {
+    setShowEnvironmentSelector(true);
+  };
+
+  const createWindowWithConfig = (config: EnvironmentConfig) => {
     const newWindow: TerminalWindowData = {
       id: generateUUID(),
       title: `Terminal ${state.windows.length + 1}`,
       createdAt: Date.now(),
+      shell: config.shell,
+      environment: config.environment,
     };
 
     setState(prev => ({
       windows: [...prev.windows, newWindow],
       activeWindowId: newWindow.id,
     }));
+
+    setShowEnvironmentSelector(false);
   };
 
   const closeWindow = (id: string) => {
@@ -140,10 +153,19 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
             title={window.title}
             isActive={state.activeWindowId === window.id}
             wsUrl={wsUrl}
+            shell={window.shell}
+            environment={window.environment}
             onTitleChange={(title) => updateWindowTitle(window.id, title)}
           />
         ))}
       </div>
+
+      {showEnvironmentSelector && (
+        <EnvironmentSelector
+          onSelect={createWindowWithConfig}
+          onCancel={() => setShowEnvironmentSelector(false)}
+        />
+      )}
     </div>
   );
 }

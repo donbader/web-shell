@@ -7,6 +7,8 @@ interface TerminalWindowProps {
   title: string;
   isActive: boolean;
   wsUrl: string;
+  shell?: string;
+  environment?: string;
   onTitleChange?: (title: string) => void;
 }
 
@@ -15,6 +17,8 @@ export function TerminalWindow({
   title,
   isActive,
   wsUrl,
+  shell,
+  environment,
   onTitleChange,
 }: TerminalWindowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,7 +34,11 @@ export function TerminalWindow({
       className={`terminal-window ${isActive ? 'active' : 'hidden'}`}
       data-window-id={windowId}
     >
-      <TerminalComponent wsUrl={wsUrl} />
+      <TerminalComponent
+        wsUrl={wsUrl}
+        shell={shell}
+        environment={environment}
+      />
     </div>
   );
 }

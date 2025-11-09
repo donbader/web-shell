@@ -1,63 +1,124 @@
 #!/bin/bash
 
-# Web Shell - Development Server Startup Script
+# Web Shell - Development Server Startup Script (Docker Compose)
 
-echo "🚀 Starting Web Shell..."
+set -e  # Exit on error
+
+echo "🚀 Starting Web Shell with Docker Compose..."
 
 # Check if we're in the project root
-if [ ! -d "backend" ] || [ ! -d "frontend" ]; then
+if [ ! -f "docker-compose.dev.yml" ]; then
     echo "❌ Error: Please run this script from the project root directory"
     echo "   Current directory: $(pwd)"
     exit 1
 fi
 
-# Start backend in background
-echo "📡 Starting backend server..."
-cd backend
-npm run dev > ../backend.log 2>&1 &
-BACKEND_PID=$!
-cd ..
+# Check if Docker is running
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Error: Docker is not running"
+    echo "   Please start Docker and try again"
+    exit 1
+fi
 
-# Wait for backend to start
-sleep 2
+# Run pre-flight checks (TypeScript type checking)
+echo ""
+if [ -f "preflight.sh" ]; then
+    if ! ./preflight.sh; then
+        echo ""
+        echo "💡 Tip: Fix TypeScript errors above, then run ./start.sh again"
+        exit 1
+    fi
+else
+    echo "⚠️  Warning: preflight.sh not found, skipping type checks"
+fi
 
-# Start frontend in background
-echo "🎨 Starting frontend server..."
-cd frontend
-npm run dev > ../frontend.log 2>&1 &
-FRONTEND_PID=$!
-cd ..
+# Function to cleanup on exit
+cleanup() {
+    echo ""
+    echo "🛑 Stopping Docker Compose services..."
+    docker compose -f docker-compose.dev.yml down
+    echo "✅ Services stopped"
+    exit 0
+}
 
-# Wait for frontend to start
-sleep 3
+# Trap Ctrl+C and other termination signals
+trap cleanup INT TERM
+
+# Stop any existing containers and clean up
+echo ""
+echo "🧹 Cleaning up existing containers and volumes..."
+docker compose -f docker-compose.dev.yml down -v 2>/dev/null || true
+
+# Build images (this ensures dependencies are installed)
+echo ""
+echo "🔨 Building Docker images (this may take a minute)..."
+if ! docker compose -f docker-compose.dev.yml build; then
+    echo "❌ Build failed. Please check the error messages above."
+    exit 1
+fi
+
+# Start services
+echo ""
+echo "🚀 Starting services..."
+if ! docker compose -f docker-compose.dev.yml up -d; then
+    echo "❌ Failed to start services"
+    exit 1
+fi
+
+# Wait for services to initialize
+echo ""
+echo "⏳ Waiting for services to initialize..."
+sleep 8
+
+# Check if containers are running
+BACKEND_RUNNING=$(docker compose -f docker-compose.dev.yml ps backend -q 2>/dev/null)
+FRONTEND_RUNNING=$(docker compose -f docker-compose.dev.yml ps frontend -q 2>/dev/null)
+
+if [ -z "$BACKEND_RUNNING" ]; then
+    echo "❌ Backend container is not running"
+    echo ""
+    echo "Backend logs:"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    docker compose -f docker-compose.dev.yml logs backend
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    cleanup
+fi
+
+if [ -z "$FRONTEND_RUNNING" ]; then
+    echo "❌ Frontend container is not running"
+    echo ""
+    echo "Frontend logs:"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    docker compose -f docker-compose.dev.yml logs frontend
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    cleanup
+fi
+
+# Check for errors in logs
+BACKEND_ERRORS=$(docker compose -f docker-compose.dev.yml logs backend 2>&1 | grep -i "error\|failed\|not found" | head -5)
+if [ -n "$BACKEND_ERRORS" ]; then
+    echo "⚠️  Backend may have errors:"
+    echo "$BACKEND_ERRORS"
+    echo ""
+fi
 
 echo ""
 echo "✅ Web Shell is running!"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Backend:  http://localhost:3000 (PID: $BACKEND_PID)"
-echo "  Frontend: http://localhost:5175 (PID: $FRONTEND_PID)"
+echo "  Backend:  http://localhost:3366"
+echo "  Frontend: http://localhost:5173"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📋 Logs:"
-echo "  Backend:  tail -f backend.log"
-echo "  Frontend: tail -f frontend.log"
+echo "📋 View logs with:"
+echo "   Backend:  docker compose -f docker-compose.dev.yml logs -f backend"
+echo "   Frontend: docker compose -f docker-compose.dev.yml logs -f frontend"
+echo "   All:      docker compose -f docker-compose.dev.yml logs -f"
 echo ""
-echo "🛑 To stop servers:"
-echo "  kill $BACKEND_PID $FRONTEND_PID"
-echo "  or run: ./stop.sh"
+echo "🛑 Press Ctrl+C to stop services"
 echo ""
-
-# Save PIDs to file for stop script
-echo "$BACKEND_PID" > .backend.pid
-echo "$FRONTEND_PID" > .frontend.pid
-
-# Keep script running and show logs
-echo "Press Ctrl+C to stop servers and exit..."
+echo "━━━━━━━━━━━━━━━━━ Live Logs ━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Trap Ctrl+C to cleanup
-trap "echo ''; echo '🛑 Stopping servers...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; rm -f .backend.pid .frontend.pid backend.log frontend.log; echo '✅ Servers stopped'; exit 0" INT
-
-# Wait for user to press Ctrl+C
-wait
+# Follow logs from both services
+docker compose -f docker-compose.dev.yml logs -f

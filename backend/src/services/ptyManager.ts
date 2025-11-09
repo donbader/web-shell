@@ -6,15 +6,76 @@ import config from '../config/config.js';
 class PTYManager {
   private sessions: Map<string, TerminalSession> = new Map();
 
-  createSession(userId: string, sessionId: string, cols: number = 80, rows: number = 24): TerminalSession {
-    // Determine shell to use (prefer zsh, fallback to sh for Alpine, bash for others)
+  createSession(
+    userId: string,
+    sessionId: string,
+    cols: number = 80,
+    rows: number = 24,
+    shell?: string,
+    environment?: string
+  ): TerminalSession {
+    // Determine shell to use
+    let shellPath: string;
+
+    if (shell) {
+      // User requested specific shell
+      const shellMap: Record<string, string> = {
+        'zsh': '/bin/zsh',
+        'bash': '/bin/bash',
+        'sh': '/bin/sh',
+      };
+      shellPath = shellMap[shell.toLowerCase()] || shell;
+
+      // Validate shell exists
+      if (!existsSync(shellPath)) {
+        console.warn(`[PTYManager] Requested shell ${shellPath} not found, using default`);
+        shellPath = this.getDefaultShell();
+      }
+    } else {
+      shellPath = this.getDefaultShell();
+    }
+
+    // Spawn PTY process with selected shell
+    const ptyProcess = pty.spawn(shellPath, [], {
+      name: 'xterm-color',
+      cols,
+      rows,
+      cwd: process.env.HOME || process.cwd(),
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        SHELL_ENVIRONMENT: environment || 'default', // For future use
+      } as any,
+    });
+
+    const session: TerminalSession = {
+      sessionId,
+      userId,
+      ptyProcess,
+      cols,
+      rows,
+      shell: shellPath,
+      environment: environment || 'default',
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      expiresAt: Date.now() + (config.idleTimeoutMinutes * 60 * 1000),
+    };
+
+    this.sessions.set(sessionId, session);
+    console.log(`[PTYManager] Created session ${sessionId} for user ${userId} (shell: ${shellPath}, env: ${environment || 'default'})`);
+
+    return session;
+  }
+
+  private getDefaultShell(): string {
+    // Use SHELL environment variable if set
     let defaultShell = process.env.SHELL;
 
     if (!defaultShell) {
       if (process.platform === 'win32') {
         defaultShell = 'powershell.exe';
       } else {
-        // Try to find the best available shell
+        // Try to find the best available shell (prefer zsh)
         if (existsSync('/bin/zsh')) {
           defaultShell = '/bin/zsh';
         } else if (existsSync('/bin/bash')) {
@@ -25,33 +86,7 @@ class PTYManager {
       }
     }
 
-    // Spawn PTY process with user's default shell
-    const ptyProcess = pty.spawn(defaultShell, [], {
-      name: 'xterm-color',
-      cols,
-      rows,
-      cwd: process.env.HOME || process.cwd(),
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-      } as any,
-    });
-
-    const session: TerminalSession = {
-      sessionId,
-      userId,
-      ptyProcess,
-      cols,
-      rows,
-      createdAt: Date.now(),
-      lastActivity: Date.now(),
-      expiresAt: Date.now() + (config.idleTimeoutMinutes * 60 * 1000),
-    };
-
-    this.sessions.set(sessionId, session);
-    console.log(`[PTYManager] Created session ${sessionId} for user ${userId}`);
-
-    return session;
+    return defaultShell;
   }
 
   getSession(sessionId: string): TerminalSession | undefined {

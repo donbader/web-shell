@@ -1,198 +1,185 @@
 # Web Shell - Browser-based Terminal Application
 
-A secure, browser-based terminal application with Google OAuth authentication and multi-window support.
+A secure, browser-based terminal application with multi-window support and customizable shell environments.
 
 ## Features
 
-- 🔐 **Google OAuth Authentication** - Secure sign-in with Google accounts
 - 💻 **Real-time Shell Execution** - Execute shell commands directly in the browser
 - 📑 **Multi-Window Support** - Multiple concurrent terminal sessions with tab interface
-- 🐳 **Fully Dockerized** - Complete containerization for easy deployment
-- 🔒 **Security-Focused** - Process isolation, resource limits, HTTPS/WSS encryption
-
-## Architecture
-
-**Frontend**: React 18 + TypeScript + Vite + xterm.js
-**Backend**: Node.js + Express + TypeScript + WebSocket + node-pty
-**Auth**: Google OAuth 2.0 + JWT session management
-**Deployment**: Docker + docker-compose
-
-## Project Status
-
-✅ **Phase 1-2 Complete!** Multi-window terminal working!
-✅ **Phase 4 Complete!** Docker deployment ready!
-
-### Implementation Phases
-
-- [x] **Phase 1**: Foundation Setup ✅
-- [x] **Phase 2**: Multi-Window Support ✅ (OAuth moved to Phase 5)
-- [ ] **Phase 3**: Production Hardening (Deferred - TLS handled at nginx/Traefik layer)
-- [x] **Phase 4**: Docker Deployment ✅
-- [ ] **Phase 5**: Google OAuth Integration (Production auth)
-
-## Prerequisites
-
-- Node.js 20 LTS
-- npm (comes with Node.js)
+- 🐚 **Environment Selection** - Choose between zsh/bash and default/minimal environments
+- 🐳 **Fully Dockerized** - Complete containerization for consistent development and deployment
+- 🔒 **Security-Focused** - Process isolation, resource limits, production-ready architecture
 
 ## Quick Start
 
-### Development Mode (Local)
+### Prerequisites
 
-**Option 1: Simple Startup Script** (Recommended)
+- Docker and Docker Compose
+- Git
+
+### Development Mode
+
 ```bash
+# Start everything with pre-flight checks
 ./start.sh
-```
-Then open: **http://localhost:3377**
 
-Press `Ctrl+C` to stop all servers.
-
-**Option 2: Manual (Two Terminals)**
-
-Terminal 1 - Backend:
-```bash
-cd backend
-npm run dev
-```
-
-Terminal 2 - Frontend:
-```bash
-cd frontend
-npm run dev
-```
-
-Then open: **http://localhost:3377**
-
-**Option 3: Stop Running Servers**
-```bash
+# Stop all services
 ./stop.sh
+# or press Ctrl+C
 ```
 
-### Docker Deployment
+**Access**: http://localhost:5173
 
-**Standalone Mode:**
+The start script automatically:
+- ✅ Runs TypeScript type checking
+- ✅ Builds Docker images
+- ✅ Starts both frontend and backend
+- ✅ Shows live logs
+
+### Production Deployment
+
 ```bash
 docker compose up -d
 ```
-Access: **http://localhost:3377**
 
-**Main Router Integration:**
-```bash
-# Option 1: Use deployment script (recommended)
-./deploy-to-main-router.sh
+**Access**: http://localhost:3377
 
-# Option 2: Manual deployment
-cd ../main-router
-docker compose up -d --build web-shell-backend web-shell-frontend
-```
-Access: **http://localhost:8888/corey-private-router/web-shell**
-
-See [Docker Deployment Guide](docs/DOCKER.md) for complete documentation.
+See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
 
 ## Using the Terminal
 
-### Multi-Window Features
+1. **Create New Terminal**: Click "+ New Terminal"
+2. **Select Environment**: Choose your shell (zsh/bash) and environment (default/minimal)
+3. **Switch Tabs**: Click tabs to switch between terminals
+4. **Close Terminal**: Click × on any tab
+5. **Run Commands**: Type commands in the active terminal
 
-Once the application is running at **http://localhost:3377**, you can:
+### Shell Environments
 
-1. **Create New Terminal**: Click the "+ New Terminal" button
-2. **Switch Tabs**: Click on any tab to make it active
-3. **Close Terminal**: Click the × button on any tab (except the last one)
-4. **Run Commands**: Type commands in the active terminal
+| Environment | Shell | Features | Tools |
+|-------------|-------|----------|-------|
+| **Default** | zsh | Plugins, completion, git | htop, tree, jq, ncdu, etc. |
+| **Default** | bash | Completion, history | htop, tree, jq, ncdu, etc. |
+| **Minimal** | zsh | Basic features only | Essential tools only |
+| **Minimal** | bash | Basic features only | Essential tools only |
 
-### Example Multi-Window Workflow
+## Architecture
 
-```bash
-# Tab 1: System monitoring
-htop
+- **Frontend**: React 19 + TypeScript + Vite + xterm.js
+- **Backend**: Node.js 20 + Express + TypeScript + WebSocket + node-pty
+- **Deployment**: Docker + docker-compose (development & production)
 
-# Tab 2: Code editing
-vim myfile.txt
+## Project Structure
 
-# Tab 3: Python development
-python3
-
-# Tab 4: File operations
-ls -la && pwd
-
-# Tab 5: Live logs
-tail -f /var/log/syslog
 ```
-
-All terminals run independently and simultaneously!
-
-### Current Features
-
-- ✅ Real-time command execution
-- ✅ Multiple concurrent terminal sessions
-- ✅ Independent shell processes per tab
-- ✅ Tab state persistence (restored on page refresh)
-- ✅ Full terminal emulation (colors, interactive programs)
-- ✅ Responsive terminal sizing
-- ✅ Clickable URLs in terminal output
-- ⚠️ **Dev Mode**: No authentication (development only)
+web-shell/
+├── backend/           # Node.js backend with PTY management
+│   ├── src/          # TypeScript source
+│   ├── environments/ # Shell environment configurations
+│   └── Dockerfile    # Production image
+├── frontend/          # React frontend
+│   ├── src/          # TypeScript source
+│   └── Dockerfile    # Production build
+├── start.sh          # Development startup script
+├── stop.sh           # Stop script
+├── preflight.sh      # Type checking before start
+├── docker-compose.dev.yml   # Development
+└── docker-compose.yml       # Production
+```
 
 ## Development
 
-### Available Scripts
+### Type Checking
 
-**Backend:**
 ```bash
-cd backend
-npm run dev         # Start dev server with hot reload
-npm run build       # Compile TypeScript to JavaScript
-npm run start       # Run compiled code
-npm run type-check  # Check TypeScript types
+# Run pre-flight checks manually
+./preflight.sh
+
+# Check backend types only
+cd backend && npm run type-check
+
+# Check frontend types only
+cd frontend && npm run type-check
 ```
 
-**Frontend:**
+### Docker Commands
+
 ```bash
-cd frontend
-npm run dev    # Start dev server with hot reload
-npm run build  # Build for production
-npm run preview # Preview production build
+# Rebuild without cache
+docker compose -f docker-compose.dev.yml build --no-cache
+
+# View logs
+docker compose -f docker-compose.dev.yml logs -f
+
+# Access container shell
+docker compose -f docker-compose.dev.yml exec backend sh
+docker compose -f docker-compose.dev.yml exec frontend sh
 ```
 
-### Environment Variables
+## Documentation
+
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development guide and best practices
+- [DOCKER.md](DOCKER.md) - Complete Docker documentation
+- [backend/ENVIRONMENTS.md](backend/ENVIRONMENTS.md) - Shell environment details
+
+## Environment Variables
+
+### Development (.env files)
 
 **Backend** (`backend/.env`):
 ```bash
 PORT=3366
 NODE_ENV=development
-AUTH_ENABLED=false                    # true for production with OAuth
-CORS_ORIGINS=http://localhost:3377
-MAX_SESSIONS_PER_USER=5
-IDLE_TIMEOUT_MINUTES=30
+AUTH_ENABLED=false
+CORS_ORIGINS=http://localhost:5173
 ```
 
 **Frontend** (`frontend/.env`):
 ```bash
 VITE_API_URL=http://localhost:3366
 VITE_WS_URL=ws://localhost:3366
+VITE_AUTH_ENABLED=false
 ```
+
+### Production (docker-compose.yml)
+
+Environment variables are configured in `docker-compose.yml` for production deployment.
 
 ## Security
 
-This application provides shell access through a web browser. Please review [docs/SECURITY.md](docs/SECURITY.md) for critical security guidelines before deployment.
+⚠️ **Development Mode**: Authentication is disabled for local development.
 
-**⚠️ Never deploy without**:
-- Google OAuth authentication enabled
-- HTTPS/WSS in production
-- Resource limits configured
-- Security headers set
+**For Production**:
+- Enable authentication (`AUTH_ENABLED=true`)
+- Use HTTPS/WSS
+- Configure reverse proxy (nginx/Traefik)
+- Set resource limits
+- Review security headers
 
-## Documentation
+## Troubleshooting
 
-- [Docker Deployment Guide](docs/DOCKER.md)
-- [Main Router Integration](docs/main-router-integration.yml)
-- [Security Requirements](docs/SECURITY.md) (Coming soon)
-- [Architecture Design](docs/ARCHITECTURE.md) (Coming soon)
-- [API Documentation](docs/API.md) (Coming soon)
+### Port Conflicts
+
+```bash
+./stop.sh
+docker compose -f docker-compose.dev.yml down -v
+./start.sh
+```
+
+### Type Errors
+
+Type checking runs automatically on start. Fix errors shown in output before continuing.
+
+### Container Issues
+
+```bash
+# Clean rebuild
+docker compose -f docker-compose.dev.yml build --no-cache
+./start.sh
+```
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for comprehensive troubleshooting guide.
 
 ## License
 
 [License TBD]
-
-## Contributing
-
-[Contributing guidelines TBD]

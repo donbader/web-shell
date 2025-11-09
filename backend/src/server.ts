@@ -91,39 +91,8 @@ wss.on('connection', (ws: WebSocket, req) => {
     return;
   }
 
-  // Create new terminal session
-  sessionId = randomUUID();
-  const session = ptyManager.createSession(userId, sessionId);
-
-  // Send session created message
-  ws.send(JSON.stringify({
-    type: 'session-created',
-    sessionId,
-  } as WebSocketResponse));
-
-  // Forward PTY output to WebSocket
-  session.ptyProcess.onData((data: string) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'output',
-        sessionId,
-        data,
-      } as WebSocketResponse));
-    }
-  });
-
-  // Handle PTY process exit
-  session.ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
-    console.log(`[PTY] Process exited: code=${exitCode}, signal=${signal}`);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        error: `Terminal process exited with code ${exitCode}`,
-      } as WebSocketResponse));
-    }
-    ptyManager.terminateSession(sessionId);
-    ws.close();
-  });
+  // Don't create session immediately - wait for create-session message
+  let session: any = null;
 
   // Handle WebSocket messages
   ws.on('message', (message: Buffer) => {
@@ -131,8 +100,51 @@ wss.on('connection', (ws: WebSocket, req) => {
       const msg = JSON.parse(message.toString()) as WebSocketMessage;
 
       switch (msg.type) {
+        case 'create-session':
+          // Create terminal session with requested shell/environment
+          sessionId = randomUUID();
+          session = ptyManager.createSession(
+            userId,
+            sessionId,
+            msg.cols || 80,
+            msg.rows || 24,
+            msg.shell,
+            msg.environment
+          );
+
+          // Send session created message
+          ws.send(JSON.stringify({
+            type: 'session-created',
+            sessionId,
+          } as WebSocketResponse));
+
+          // Forward PTY output to WebSocket
+          session.ptyProcess.onData((data: string) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'output',
+                sessionId,
+                data,
+              } as WebSocketResponse));
+            }
+          });
+
+          // Handle PTY process exit
+          session.ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+            console.log(`[PTY] Process exited: code=${exitCode}, signal=${signal}`);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                error: `Terminal process exited with code ${exitCode}`,
+              } as WebSocketResponse));
+            }
+            ptyManager.terminateSession(sessionId);
+            ws.close();
+          });
+          break;
+
         case 'input':
-          if (msg.data) {
+          if (msg.data && session) {
             ptyManager.write(sessionId, msg.data);
           }
           break;

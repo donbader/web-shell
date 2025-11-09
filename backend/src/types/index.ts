@@ -16,14 +16,18 @@ export interface TerminalSession extends Session {
   ptyProcess: any; // node-pty IPty type
   cols: number;
   rows: number;
+  shell: string; // Shell path (e.g., /bin/zsh, /bin/bash)
+  environment: string; // Environment name (e.g., default, minimal)
 }
 
 export interface WebSocketMessage {
-  type: 'input' | 'resize' | 'ping';
+  type: 'input' | 'resize' | 'ping' | 'create-session';
   sessionId?: string;
   data?: string;
   cols?: number;
   rows?: number;
+  shell?: string; // Requested shell (zsh, bash)
+  environment?: string; // Requested environment (default, minimal)
 }
 
 export interface WebSocketResponse {

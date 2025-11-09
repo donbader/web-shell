@@ -1,0 +1,54 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: web-shell-backend-dev
+    ports:
+      - "3366:3366"
+    volumes:
+      - ./backend:/app
+      - backend-node-modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3366
+      - AUTH_ENABLED=false
+      - CORS_ORIGINS=http://localhost:5173
+      - MAX_SESSIONS_PER_USER=10
+      - IDLE_TIMEOUT_MINUTES=60
+    command: npm run dev
+    restart: unless-stopped
+    networks:
+      - web-shell-network
+    stdin_open: true
+    tty: true
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: web-shell-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3366
+      - VITE_WS_URL=ws://localhost:3366
+    command: npm run dev -- --host 0.0.0.0
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - web-shell-network
+    stdin_open: true
+    tty: true
+
+networks:
+  web-shell-network:
+    driver: bridge
+
+volumes:
+  backend-node-modules:
+  frontend-node-modules:

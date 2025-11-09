@@ -1,9 +1,11 @@
 export interface WebSocketMessage {
-  type: 'input' | 'resize' | 'ping';
+  type: 'input' | 'resize' | 'ping' | 'create-session';
   sessionId?: string;
   data?: string;
   cols?: number;
   rows?: number;
+  shell?: string;
+  environment?: string;
 }
 
 export interface WebSocketResponse {
@@ -26,7 +28,11 @@ export class WebSocketService {
   private onErrorCallback: ((error: string) => void) | null = null;
   private onCloseCallback: (() => void) | null = null;
 
-  constructor(private url: string) {}
+  constructor(
+    private url: string,
+    private shell?: string,
+    private environment?: string
+  ) {}
 
   connect(): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -46,6 +52,16 @@ export class WebSocketService {
         this.ws.onopen = () => {
           console.log('[WebSocket] Connected');
           this.reconnectAttempts = 0;
+
+          // Send create-session message
+          const createSessionMsg: WebSocketMessage = {
+            type: 'create-session',
+            cols: 80,
+            rows: 24,
+            shell: this.shell,
+            environment: this.environment,
+          };
+          this.ws?.send(JSON.stringify(createSessionMsg));
         };
 
         this.ws.onmessage = (event) => {

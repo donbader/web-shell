@@ -1,0 +1,161 @@
+.environment-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.environment-selector {
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.environment-selector h2 {
+  margin: 0 0 1.5rem 0;
+  color: #e0e0e0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.selector-section {
+  margin-bottom: 1.5rem;
+}
+
+.selector-section label {
+  display: block;
+  color: #b0b0b0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.selector-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.selector-option {
+  background: #2a2a2a;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selector-option:hover {
+  background: #333;
+  border-color: #444;
+}
+
+.selector-option.selected {
+  background: #2a4a6a;
+  border-color: #4a90e2;
+}
+
+.option-icon {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.option-label {
+  color: #e0e0e0;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.option-desc {
+  color: #888;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.selector-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #333;
+}
+
+.selector-actions button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: #888;
+  border: 1px solid #444;
+}
+
+.btn-cancel:hover {
+  background: #2a2a2a;
+  color: #b0b0b0;
+}
+
+.btn-create {
+  background: #4a90e2;
+  color: white;
+}
+
+.btn-create:hover {
+  background: #357abd;
+}
+
+@media (max-width: 640px) {
+  .selector-options {
+    grid-template-columns: 1fr;
+  }
+
+  .environment-selector {
+    width: 95%;
+    padding: 1.5rem;
+  }
+}

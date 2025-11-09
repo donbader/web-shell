@@ -1,0 +1,26 @@
+# Development Dockerfile for Web Shell Backend
+FROM node:20-alpine
+
+# Install system dependencies for node-gyp and terminal tools
+RUN apk add --no-cache \
+    python3 make g++ \
+    zsh bash \
+    git curl \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies (including dev dependencies for tsx)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose backend port
+EXPOSE 3366
+
+# Start development server with tsx
+CMD ["npm", "run", "dev"]

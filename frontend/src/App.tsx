@@ -3,23 +3,31 @@ import { WindowManager } from './components/WindowManager';
 import { Login } from './components/Login';
 import './App.css';
 
-// Construct API URL dynamically based on current host
-// This ensures it works whether accessing via localhost, IP, or domain
+// Get API and WebSocket URLs from environment variables
+// Falls back to dynamic construction for production reverse proxy setup
 const getApiUrl = (): string => {
-  const protocol = window.location.protocol; // http: or https:
-  const host = window.location.host; // includes port if present
-  const basePath = '/corey-private-router/web-shell-api';
+  // Use environment variable if provided (development)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
 
+  // Otherwise construct dynamically (production with reverse proxy)
+  const protocol = window.location.protocol;
+  const host = window.location.host;
+  const basePath = '/corey-private-router/web-shell-api';
   return `${protocol}//${host}${basePath}`;
 };
 
-// Construct WebSocket URL dynamically based on current host
-// This ensures it works whether accessing via localhost, IP, or domain
 const getWebSocketUrl = (): string => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host; // includes port if present
-  const basePath = '/corey-private-router/web-shell-api';
+  // Use environment variable if provided (development)
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
 
+  // Otherwise construct dynamically (production with reverse proxy)
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  const basePath = '/corey-private-router/web-shell-api';
   return `${protocol}//${host}${basePath}`;
 };
 

@@ -7,9 +7,11 @@ import { WebSocketService } from '../services/websocket';
 
 interface TerminalComponentProps {
   wsUrl: string;
+  shell?: string;
+  environment?: string;
 }
 
-export function TerminalComponent({ wsUrl }: TerminalComponentProps) {
+export function TerminalComponent({ wsUrl, shell, environment }: TerminalComponentProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -67,7 +69,7 @@ export function TerminalComponent({ wsUrl }: TerminalComponentProps) {
     fitAddonRef.current = fitAddon;
 
     // Create WebSocket service
-    const wsService = new WebSocketService(wsUrl);
+    const wsService = new WebSocketService(wsUrl, shell, environment);
     wsServiceRef.current = wsService;
 
     // Terminal input handler
@@ -130,7 +132,7 @@ export function TerminalComponent({ wsUrl }: TerminalComponentProps) {
       wsService.close();
       terminal.dispose();
     };
-  }, [wsUrl]);
+  }, [wsUrl, shell, environment]);
 
   return (
     <div
