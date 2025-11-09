@@ -149,12 +149,11 @@ COPY . .
 COPY environments/default/.zshrc /root/.zshrc
 COPY environments/default/.bashrc /root/.bashrc
 
-# Create non-root user for development
-RUN addgroup -g 1000 devuser && \
-    adduser -D -u 1000 -G devuser devuser && \
-    chown -R devuser:devuser /app
+# Set ownership to existing node user (UID 1000)
+RUN chown -R node:node /app
 
-USER devuser
+# Switch to non-root user
+USER node
 
 EXPOSE 3366
 

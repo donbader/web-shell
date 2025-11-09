@@ -32,7 +32,6 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
   const [showBuildModal, setShowBuildModal] = useState(false);
   const [buildEnvironment, setBuildEnvironment] = useState<string>('');
   const [buildProgress, setBuildProgress] = useState<BuildProgress | null>(null);
-  const [pendingConfig, setPendingConfig] = useState<EnvironmentConfig | null>(null);
   const [imagesReady, setImagesReady] = useState(false);
 
   const [state, setState] = useState<WindowManagerState>(() => {
@@ -113,7 +112,6 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       setShowEnvironmentSelector(false);
       setBuildEnvironment(environment);
       setShowBuildModal(true);
-      setPendingConfig(config);
 
       // Ensure image exists, building if necessary
       await ensureImage(environment, (progress) => {
@@ -157,15 +155,12 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       windows: [...prev.windows, newWindow],
       activeWindowId: newWindow.id,
     }));
-
-    setPendingConfig(null);
   };
 
   const closeBuildModal = () => {
     setShowBuildModal(false);
     setBuildProgress(null);
     setBuildEnvironment('');
-    setPendingConfig(null);
   };
 
   const closeWindow = (id: string) => {
