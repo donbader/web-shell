@@ -75,8 +75,9 @@ class ContainerManager {
           Binds: [`${volumeName}:/workspace`],
           // Auto-remove container when it stops
           AutoRemove: true,
-          // Network mode to communicate with backend
-          NetworkMode: 'web-shell_web-shell-network',
+          // Network mode - use environment variable (required in deployment config)
+          // Falls back to 'bridge' if not specified (for local dev)
+          NetworkMode: process.env.DOCKER_NETWORK || 'bridge',
           // Resource limits for security and stability
           Memory: 512 * 1024 * 1024, // 512MB memory limit
           MemorySwap: 512 * 1024 * 1024, // Disable swap (same as Memory)
@@ -309,14 +310,15 @@ class ContainerManager {
       const tarStream = tar.c(
         {
           gzip: false,
-          cwd: '/app', // Current working directory in dev container
+          cwd: '/build-context', // Use mounted build context directory
         },
-        ['.'] // Include all files from current directory
+        ['.'] // Include all files from build context
       );
 
       // Build the image - cast tar stream to unknown then to NodeJS.ReadableStream
       const stream = await this.docker.buildImage(tarStream as unknown as NodeJS.ReadableStream, {
         t: imageName,
+        dockerfile: 'Dockerfile',  // Specify Dockerfile name
         target: environment,
         buildargs: {
           ENVIRONMENT: environment,

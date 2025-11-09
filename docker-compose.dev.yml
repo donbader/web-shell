@@ -59,6 +59,8 @@ services:
       - IDLE_TIMEOUT_MINUTES=60
       # Docker proxy connection
       - DOCKER_HOST=tcp://docker-proxy:2375
+      # Network for session containers
+      - DOCKER_NETWORK=web-shell-network
     command: npm run dev
     restart: unless-stopped
     networks:
