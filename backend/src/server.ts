@@ -11,6 +11,7 @@ import { validateEnvironment, logConfiguration } from './config/validation.js';
 import ptyManager from './services/ptyManager.js';
 import containerManager from './services/containerManager.js';
 import wsConnectionManager from './services/wsConnectionManager.js';
+import resourceStreamer from './services/resourceStreamer.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import environmentRoutes from './routes/environments.js';
@@ -146,6 +147,17 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   // Extract client IP address
   const clientIp = extractClientIp(req);
+
+  // Check if this is a resource monitoring connection
+  const url = new URL(req.url || '', `http://${req.headers.host}`);
+  const isResourceMonitoring = url.pathname === '/resources' || url.searchParams.get('type') === 'resources';
+
+  if (isResourceMonitoring) {
+    // Handle resource monitoring WebSocket
+    logger.debug('Resource monitoring WebSocket connection established', { clientIp });
+    resourceStreamer.subscribe(ws);
+    return;
+  }
 
   // Extract and verify token
   if (!config.authEnabled) {

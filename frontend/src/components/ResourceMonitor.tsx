@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import {
-  getResourceStats,
   getSessions,
   terminateSession,
   terminateOrphanedContainer,
@@ -21,15 +20,16 @@ import {
   formatPercent,
   getUsageColor,
 } from '../services/resourceService';
+import { ResourceWebSocket } from '../services/resourceWebSocket';
 import type { SystemStats, ContainerStats, SessionWithMetadata } from '../types/resources';
-import { Activity, Cpu, HardDrive, Network, Server, Users, XCircle, Loader2 } from 'lucide-react';
+import { Activity, Cpu, HardDrive, Network, Server, Users, XCircle, Loader2, Wifi, WifiOff } from 'lucide-react';
 
 export function ResourceMonitor() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [sessions, setSessions] = useState<SessionWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
   const [confirmTerminateSession, setConfirmTerminateSession] = useState<SessionWithMetadata | null>(
     null
@@ -40,31 +40,46 @@ export function ResourceMonitor() {
   );
 
   useEffect(() => {
-    const fetchStats = async () => {
+    // Create WebSocket connection for real-time updates
+    const ws = new ResourceWebSocket();
+
+    const handleUpdate = (statsData: SystemStats) => {
+      setStats(statsData);
+      setError(null);
+      setLoading(false);
+      setIsConnected(true);
+    };
+
+    const handleError = (errorMsg: string) => {
+      setError(errorMsg);
+      setIsConnected(false);
+    };
+
+    // Connect with 1-second update interval
+    ws.connect(handleUpdate, handleError, {
+      updateInterval: 1000,
+      enableDeltaCompression: true,
+    });
+
+    // Fetch sessions initially and periodically
+    const fetchSessions = async () => {
       try {
-        const [statsData, sessionsData] = await Promise.all([
-          getResourceStats(),
-          getSessions(),
-        ]);
-        setStats(statsData);
+        const sessionsData = await getSessions();
         setSessions(sessionsData.sessions);
-        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load resource statistics');
-      } finally {
-        setLoading(false);
+        console.error('Failed to fetch sessions:', err);
       }
     };
 
-    // Initial fetch
-    fetchStats();
+    fetchSessions();
+    const sessionsInterval = setInterval(fetchSessions, 5000);
 
-    // Auto-refresh every 2 seconds if enabled
-    if (autoRefresh) {
-      const interval = setInterval(fetchStats, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh]);
+    // Cleanup on unmount
+    return () => {
+      ws.disconnect();
+      clearInterval(sessionsInterval);
+    };
+  }, []);
 
   const handleTerminateSession = async (session: SessionWithMetadata) => {
     setTerminatingSession(session.sessionId);
@@ -135,16 +150,25 @@ export function ResourceMonitor() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={autoRefresh ? 'default' : 'secondary'}>
-              <Activity className="w-3 h-3 mr-1" />
-              {autoRefresh ? 'Live' : 'Paused'}
+            <Badge variant={isConnected ? 'default' : 'secondary'}>
+              {isConnected ? (
+                <>
+                  <Wifi className="w-3 h-3 mr-1" />
+                  Connected
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3 h-3 mr-1" />
+                  Disconnected
+                </>
+              )}
             </Badge>
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className="text-sm px-3 py-1 rounded border hover:bg-accent"
-            >
-              {autoRefresh ? 'Pause' : 'Resume'}
-            </button>
+            {isConnected && (
+              <Badge variant="outline" className="text-xs">
+                <Activity className="w-3 h-3 mr-1" />
+                1s updates
+              </Badge>
+            )}
           </div>
         </div>
 
