@@ -2,6 +2,8 @@ import Docker from 'dockerode';
 import config from '../config/config.js';
 import logger from '../utils/logger.js';
 
+import resourceMonitor from './resourceMonitor.js';
+
 interface ContainerSession {
   containerId: string;
   containerName: string;
@@ -315,6 +317,9 @@ class ContainerManager {
       logger.info(`Terminated orphaned container ${containerName}`, {
         containerId,
       });
+
+      // Invalidate resource monitor cache so it stops trying to monitor this container
+      resourceMonitor.invalidateCache();
 
       return true;
     } catch (error) {

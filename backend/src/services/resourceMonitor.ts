@@ -105,6 +105,16 @@ class ResourceMonitor {
   }
 
   /**
+   * Invalidate the container cache to force immediate refresh
+   * Should be called when containers are terminated
+   */
+  invalidateCache(): void {
+    this.cachedContainers = null;
+    this.lastContainerDiscovery = 0;
+    logger.debug('Container cache invalidated');
+  }
+
+  /**
    * Start a stats stream for a container
    */
   private async startStatsStream(containerId: string, containerName: string): Promise<void> {
@@ -127,14 +137,38 @@ class ResourceMonitor {
         isActive: true,
       };
 
+      // Buffer for incomplete JSON chunks
+      let buffer = '';
+
       // Listen for stats data
       stream.on('data', (chunk: Buffer) => {
         try {
-          const stats = JSON.parse(chunk.toString());
-          handler.latestStats = stats;
-          handler.isActive = true;
+          // Append chunk to buffer
+          buffer += chunk.toString();
+          
+          // Split on newlines to get complete JSON objects
+          const lines = buffer.split('\n');
+          
+          // Keep the last incomplete line in buffer
+          buffer = lines.pop() || '';
+          
+          // Parse each complete line
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const stats = JSON.parse(line);
+                handler.latestStats = stats;
+                handler.isActive = true;
+              } catch (parseError) {
+                logger.debug(`Failed to parse stats line for ${containerName}`, { 
+                  error: parseError,
+                  line: line.substring(0, 100) // Log first 100 chars for debugging
+                });
+              }
+            }
+          }
         } catch (error) {
-          logger.debug(`Failed to parse stats for ${containerName}`, { error });
+          logger.debug(`Failed to process stats chunk for ${containerName}`, { error });
         }
       });
 
