@@ -40,41 +40,35 @@ export function ResourceMonitor() {
   );
 
   useEffect(() => {
-    // Create WebSocket connection for real-time updates
     const ws = new ResourceWebSocket();
 
-    const handleUpdate = (statsData: SystemStats) => {
-      setStats(statsData);
-      setError(null);
-      setLoading(false);
-      setIsConnected(true);
-    };
+    // Connect with callbacks
+    ws.connect(
+      (stats) => {
+        setStats(stats);
+        setError(null);
+        setLoading(false);
+        setIsConnected(true);
+      },
+      (errorMsg) => {
+        setError(errorMsg);
+        setIsConnected(false);
+      }
+    );
 
-    const handleError = (errorMsg: string) => {
-      setError(errorMsg);
-      setIsConnected(false);
-    };
-
-    // Connect with 1-second update interval
-    ws.connect(handleUpdate, handleError, {
-      updateInterval: 1000,
-      enableDeltaCompression: true,
-    });
-
-    // Fetch sessions initially and periodically
+    // Fetch sessions periodically (simple HTTP polling)
     const fetchSessions = async () => {
       try {
         const sessionsData = await getSessions();
         setSessions(sessionsData.sessions);
       } catch (err) {
-        console.error('Failed to fetch sessions:', err);
+        // Ignore session fetch errors
       }
     };
 
     fetchSessions();
     const sessionsInterval = setInterval(fetchSessions, 5000);
 
-    // Cleanup on unmount
     return () => {
       ws.disconnect();
       clearInterval(sessionsInterval);
