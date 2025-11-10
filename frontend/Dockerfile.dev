@@ -16,10 +16,8 @@ RUN npm install && \
 # Copy source code (separate layer for better rebuild performance)
 COPY . .
 
-# Switch to non-root user
-# Note: In dev mode with volume mounts, host permissions apply
-# No chown needed as ./frontend:/app mount overrides ownership
-USER node
+# Note: Running as root in development mode to avoid permission issues with volume mounts
+# In production, we use non-root user
 
 # Expose Vite dev server port
 EXPOSE 5173
