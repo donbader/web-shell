@@ -47,6 +47,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-node-modules:/app/node_modules
+      - ./backend:/build-context:ro  # Build context for dynamic image building
       # SECURITY: Direct Docker socket mount REMOVED - access now through proxy
     environment:
       - NODE_ENV=development
