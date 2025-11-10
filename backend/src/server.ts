@@ -9,6 +9,8 @@ import helmet from 'helmet';
 import config from './config/config.js';
 import { validateEnvironment, logConfiguration } from './config/validation.js';
 import ptyManager from './services/ptyManager.js';
+import containerManager from './services/containerManager.js';
+import wsConnectionManager from './services/wsConnectionManager.js';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import environmentRoutes from './routes/environments.js';
@@ -142,11 +144,14 @@ wss.on('connection', (ws: WebSocket, req) => {
   let userId: string;
   let sessionId: string;
 
+  // Extract client IP address
+  const clientIp = extractClientIp(req);
+
   // Extract and verify token
   if (!config.authEnabled) {
     // Dev mode: Auto-assign user
     userId = 'dev-user';
-    logger.debug('WebSocket connection from dev user');
+    logger.debug('WebSocket connection from dev user', { clientIp });
   } else {
     // Production mode: Verify JWT
     const token = extractTokenFromRequest(req);
@@ -164,7 +169,7 @@ wss.on('connection', (ws: WebSocket, req) => {
     }
 
     userId = user.userId;
-    logger.debug(`WebSocket connection from user: ${userId}`);
+    logger.debug(`WebSocket connection from user: ${userId}`, { clientIp });
   }
 
   // Check session limit
@@ -245,6 +250,9 @@ wss.on('connection', (ws: WebSocket, req) => {
             envValidation.environment!
           );
 
+          // Register WebSocket connection
+          wsConnectionManager.register(sessionId, userId, clientIp, ws);
+
           // Send session created message
           ws.send(JSON.stringify({
             type: 'session-created',
@@ -267,12 +275,18 @@ wss.on('connection', (ws: WebSocket, req) => {
             logger.debug(`PTY stream ended for session ${sessionId}`);
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({
-                type: 'error',
-                error: 'Terminal session ended',
+                type: 'session-ended',
+                sessionId,
+                reason: 'Shell process exited',
               } as WebSocketResponse));
             }
+            // Unregister WebSocket connection
+            wsConnectionManager.unregister(sessionId);
             ptyManager.terminateSession(sessionId);
-            ws.close();
+            // Give client time to receive message before closing
+            setTimeout(() => {
+              ws.close(1000, 'Shell process exited');
+            }, 100);
           });
           break;
         }
@@ -339,7 +353,10 @@ wss.on('connection', (ws: WebSocket, req) => {
   // Handle WebSocket close
   ws.on('close', () => {
     logger.debug(`WebSocket connection closed for session ${sessionId}`);
-    ptyManager.terminateSession(sessionId);
+    if (sessionId) {
+      wsConnectionManager.unregister(sessionId);
+      ptyManager.terminateSession(sessionId);
+    }
   });
 
   // Handle WebSocket errors
@@ -348,9 +365,32 @@ wss.on('connection', (ws: WebSocket, req) => {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-    ptyManager.terminateSession(sessionId);
+    if (sessionId) {
+      wsConnectionManager.unregister(sessionId);
+      ptyManager.terminateSession(sessionId);
+    }
   });
 });
+
+// Helper function to extract client IP from WebSocket request
+function extractClientIp(req: any): string {
+  // Try X-Forwarded-For header (proxy/load balancer)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs, take the first one
+    const ips = forwardedFor.split(',');
+    return ips[0].trim();
+  }
+
+  // Try X-Real-IP header (nginx proxy)
+  const realIp = req.headers['x-real-ip'];
+  if (realIp) {
+    return realIp;
+  }
+
+  // Fall back to socket remote address
+  return req.socket.remoteAddress || 'unknown';
+}
 
 // Helper function to extract token from WebSocket request
 function extractTokenFromRequest(req: any): string | null {
@@ -388,6 +428,13 @@ setInterval(() => {
     cleanupExpiredSessions();
   }
 }, 5 * 60 * 1000);
+
+// Clean up orphaned containers from previous runs
+containerManager.cleanupOrphanedContainersOnStartup().catch(error => {
+  logger.error('Failed to clean up orphaned containers on startup', {
+    error: error instanceof Error ? error.message : String(error),
+  });
+});
 
 // Start server
 server.listen(config.port, () => {

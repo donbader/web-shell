@@ -1,5 +1,5 @@
 import { getApiUrl } from '../utils/apiUrl.js';
-import type { SystemStats } from '../types/resources.js';
+import type { SystemStats, SessionsResponse, TerminateSessionResponse } from '../types/resources.js';
 
 const API_URL = getApiUrl();
 
@@ -41,6 +41,56 @@ export async function getHistoricalStats(minutes: number = 60): Promise<SystemSt
 
   return response.json();
 }
+
+/**
+ * Fetch all active sessions with metadata
+ */
+export async function getSessions(): Promise<SessionsResponse> {
+  const response = await fetch(`${API_URL}/api/resources/sessions`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch sessions: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Terminate a specific terminal session
+ * @param sessionId - Session identifier to terminate
+ * @returns Termination result with metadata
+ */
+export async function terminateSession(sessionId: string): Promise<TerminateSessionResponse> {
+  const response = await fetch(`${API_URL}/api/resources/sessions/${sessionId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(errorData.error || errorData.message || `Failed to terminate session: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Terminate an orphaned container by container ID
+ * @param containerId - Docker container identifier
+ * @returns Termination result
+ */
+export async function terminateOrphanedContainer(containerId: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/api/resources/orphaned/${containerId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(errorData.error || errorData.message || `Failed to terminate orphaned container: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 
 /**
  * Format bytes to human-readable string

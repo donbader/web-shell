@@ -9,10 +9,17 @@
 }
 
 .terminal-window.hidden {
-  display: none;
+  /* Use visibility:hidden instead of display:none to preserve xterm.js state */
+  visibility: hidden;
+  /* Keep element in DOM but make it inaccessible */
+  pointer-events: none;
+  /* Ensure hidden terminals are behind active ones */
+  z-index: 0;
 }
 
 .terminal-window.active {
-  display: block;
+  /* Make terminal visible and interactive */
+  visibility: visible;
+  pointer-events: auto;
   z-index: 1;
 }

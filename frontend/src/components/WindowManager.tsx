@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TerminalWindow } from './TerminalWindow';
 import { EnvironmentSelector } from './EnvironmentSelector';
 import { ImageBuildModal } from './ImageBuildModal';
@@ -18,6 +18,7 @@ interface TerminalWindowData {
   createdAt: number;
   shell?: string;
   environment?: string;
+  sessionId?: string; // Track backend session ID
 }
 
 interface WindowManagerState {
@@ -200,14 +201,23 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
     }));
   };
 
-  const updateWindowTitle = (id: string, title: string) => {
+  const updateWindowTitle = useCallback((id: string, title: string) => {
     setState(prev => ({
       ...prev,
       windows: prev.windows.map(w =>
         w.id === id ? { ...w, title } : w
       ),
     }));
-  };
+  }, []);
+
+  const updateWindowSessionId = useCallback((id: string, sessionId: string) => {
+    setState(prev => ({
+      ...prev,
+      windows: prev.windows.map(w =>
+        w.id === id ? { ...w, sessionId } : w
+      ),
+    }));
+  }, []);
 
   return (
     <div className="flex flex-col flex-1">
@@ -230,6 +240,11 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
               <span className="truncate max-w-[80px] sm:max-w-[120px]">
                 {window.title}
               </span>
+              {window.sessionId && (
+                <span className="flex-shrink-0 text-[10px] text-muted-foreground font-mono" title={`Session: ${window.sessionId}`}>
+                  {window.sessionId.substring(0, 6)}
+                </span>
+              )}
               {window.environment && (
                 <span className="flex-shrink-0" title={window.environment}>
                   {window.environment === 'minimal' ? <Zap className="h-3 w-3" /> : <Rocket className="h-3 w-3" />}
@@ -276,6 +291,8 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
             shell={window.shell}
             environment={window.environment}
             onTitleChange={(title) => updateWindowTitle(window.id, title)}
+            onSessionCreated={(sessionId) => updateWindowSessionId(window.id, sessionId)}
+            onSessionEnded={() => closeWindow(window.id)}
           />
         ))}
       </div>

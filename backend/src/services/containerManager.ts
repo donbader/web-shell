@@ -244,6 +244,114 @@ class ContainerManager {
   }
 
   /**
+   * Discover ALL session containers from Docker, including orphaned ones
+   * Returns both tracked sessions and orphaned containers
+   */
+  async discoverAllSessionContainers(): Promise<{
+    tracked: ContainerSession[];
+    orphaned: Array<{ containerId: string; containerName: string }>;
+  }> {
+    try {
+      // List all containers matching our naming pattern
+      const containers = await this.docker.listContainers({
+        all: true,
+        filters: {
+          name: ['web-shell-session-'],
+        },
+      });
+
+      const tracked: ContainerSession[] = [];
+      const orphaned: Array<{ containerId: string; containerName: string }> = [];
+
+      for (const containerInfo of containers) {
+        const containerId = containerInfo.Id;
+        const containerName = containerInfo.Names[0]?.replace(/^\//, '') || '';
+
+        // Extract sessionId from container name (format: web-shell-session-{uuid})
+        const sessionIdMatch = containerName.match(/web-shell-session-(.+)$/);
+        const sessionId = sessionIdMatch ? sessionIdMatch[1] : null;
+
+        // Check if this session is tracked
+        const trackedSession = sessionId ? this.sessions.get(sessionId) : null;
+
+        if (trackedSession) {
+          tracked.push(trackedSession);
+        } else {
+          // This is an orphaned container
+          orphaned.push({
+            containerId,
+            containerName,
+          });
+        }
+      }
+
+      return { tracked, orphaned };
+    } catch (error) {
+      logger.error('Failed to discover session containers', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Return tracked sessions as fallback
+      return {
+        tracked: Array.from(this.sessions.values()),
+        orphaned: [],
+      };
+    }
+  }
+
+  /**
+   * Terminate an orphaned container by container ID
+   */
+  async terminateOrphanedContainer(containerId: string): Promise<boolean> {
+    try {
+      const container = this.docker.getContainer(containerId);
+      
+      // Get container info to log the name
+      const info = await container.inspect();
+      const containerName = info.Name.replace(/^\//, '');
+
+      // Stop container (will auto-remove due to AutoRemove flag if it was set)
+      await container.stop({ t: 5 }); // 5 second timeout
+
+      logger.info(`Terminated orphaned container ${containerName}`, {
+        containerId,
+      });
+
+      return true;
+    } catch (error) {
+      logger.error(`Failed to terminate orphaned container ${containerId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Clean up all orphaned containers on startup
+   * Should be called when the server starts to clean up containers from previous runs
+   */
+  async cleanupOrphanedContainersOnStartup(): Promise<void> {
+    logger.info('Checking for orphaned containers from previous runs...');
+    
+    const { orphaned } = await this.discoverAllSessionContainers();
+    
+    if (orphaned.length === 0) {
+      logger.info('No orphaned containers found');
+      return;
+    }
+
+    logger.info(`Found ${orphaned.length} orphaned containers, terminating...`);
+
+    const terminationResults = await Promise.allSettled(
+      orphaned.map(container => this.terminateOrphanedContainer(container.containerId))
+    );
+
+    const succeeded = terminationResults.filter(r => r.status === 'fulfilled' && r.value).length;
+    const failed = terminationResults.length - succeeded;
+
+    logger.info(`Cleaned up ${succeeded} orphaned containers, ${failed} failed`);
+  }
+
+  /**
    * Check Docker connection
    */
   async checkConnection(): Promise<boolean> {

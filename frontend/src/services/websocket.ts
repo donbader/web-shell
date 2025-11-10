@@ -9,10 +9,11 @@ export interface WebSocketMessage {
 }
 
 export interface WebSocketResponse {
-  type: 'output' | 'session-created' | 'error' | 'pong';
+  type: 'output' | 'session-created' | 'error' | 'pong' | 'session-ended' | 'termination-notice';
   sessionId?: string;
   data?: string;
   error?: string;
+  reason?: string;
 }
 
 export class WebSocketService {
@@ -90,6 +91,24 @@ export class WebSocketService {
                 console.error('[WebSocket] Error:', response.error);
                 if (this.onErrorCallback && response.error) {
                   this.onErrorCallback(response.error);
+                }
+                break;
+
+              case 'session-ended':
+                console.log('[WebSocket] Session ended:', response.reason);
+                // Mark as intentionally closed to prevent reconnection
+                this.intentionallyClosed = true;
+                if (this.onErrorCallback) {
+                  this.onErrorCallback(response.reason || 'Session ended');
+                }
+                break;
+
+              case 'termination-notice':
+                console.log('[WebSocket] Session being terminated:', response.reason);
+                // Mark as intentionally closed to prevent reconnection
+                this.intentionallyClosed = true;
+                if (this.onErrorCallback) {
+                  this.onErrorCallback(response.reason || 'Session terminated');
                 }
                 break;
 

@@ -145,13 +145,13 @@ function App() {
 
       {/* Main Content */}
       <main className="flex flex-col flex-1 overflow-hidden">
-        {activeView === 'terminal' ? (
+        {/* Keep both views mounted, show/hide with CSS to preserve WebSocket connections */}
+        <div className={activeView === 'terminal' ? 'flex flex-col flex-1' : 'hidden'}>
           <WindowManager wsUrl={WS_URL} />
-        ) : (
-          <div className="flex-1 overflow-auto">
-            <ResourceMonitor />
-          </div>
-        )}
+        </div>
+        <div className={activeView === 'resources' ? 'flex-1 overflow-auto' : 'hidden'}>
+          <ResourceMonitor />
+        </div>
       </main>
     </div>
   );

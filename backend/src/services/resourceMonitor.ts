@@ -17,6 +17,7 @@ export interface ContainerStats {
   blockRead: number; // bytes
   blockWrite: number; // bytes
   pids: number;
+  orphaned?: boolean; // true if container is not tracked in session manager
 }
 
 /**
@@ -136,14 +137,35 @@ class ResourceMonitor {
    */
   async getSystemStats(): Promise<SystemStats> {
     const timestamp = Date.now();
-    const sessions = containerManager.getAllSessions();
+    
+    // Discover ALL session containers (both tracked and orphaned)
+    const { tracked, orphaned } = await containerManager.discoverAllSessionContainers();
 
-    // Get stats for all session containers
-    const sessionStatsPromises = sessions.map(session =>
+    // Get stats for all tracked session containers
+    const sessionStatsPromises = tracked.map(session =>
       this.getContainerStats(session.containerId, session.containerName)
     );
-    const sessionStatsResults = await Promise.all(sessionStatsPromises);
+    
+    // Get stats for orphaned containers
+    const orphanedStatsPromises = orphaned.map(orphan =>
+      this.getContainerStats(orphan.containerId, orphan.containerName)
+    );
+
+    const [sessionStatsResults, orphanedStatsResults] = await Promise.all([
+      Promise.all(sessionStatsPromises),
+      Promise.all(orphanedStatsPromises),
+    ]);
+
     const sessionStats = sessionStatsResults.filter((s): s is ContainerStats => s !== null);
+    const orphanedStats = orphanedStatsResults.filter((s): s is ContainerStats => s !== null);
+
+    // Mark orphaned containers in their stats
+    orphanedStats.forEach(stat => {
+      (stat as any).orphaned = true;
+    });
+
+    // Combine all container stats
+    const allContainerStats = [...sessionStats, ...orphanedStats];
 
     // Get backend stats
     let backendStats = {
@@ -192,18 +214,18 @@ class ResourceMonitor {
     }
 
     // Calculate summary
-    const totalMemoryUsage = sessionStats.reduce((sum, s) => sum + s.memoryUsage, 0);
-    const totalCpuPercent = sessionStats.reduce((sum, s) => sum + s.cpuPercent, 0);
-    const activeSessions = sessionStats.filter(s => s.cpuPercent > 1).length;
-    const idleSessions = sessionStats.filter(s => s.cpuPercent <= 1).length;
+    const totalMemoryUsage = allContainerStats.reduce((sum, s) => sum + s.memoryUsage, 0);
+    const totalCpuPercent = allContainerStats.reduce((sum, s) => sum + s.cpuPercent, 0);
+    const activeSessions = allContainerStats.filter(s => s.cpuPercent > 1).length;
+    const idleSessions = allContainerStats.filter(s => s.cpuPercent <= 1).length;
 
     return {
       timestamp,
       backend: backendStats,
       frontend: frontendStats,
-      sessions: sessionStats,
+      sessions: allContainerStats,
       summary: {
-        totalSessions: sessions.length,
+        totalSessions: tracked.length + orphaned.length,
         totalMemoryUsage,
         totalCpuPercent: Math.round(totalCpuPercent * 100) / 100,
         activeSessions,

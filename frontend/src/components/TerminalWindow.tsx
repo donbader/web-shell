@@ -10,6 +10,8 @@ interface TerminalWindowProps {
   shell?: string;
   environment?: string;
   onTitleChange?: (title: string) => void;
+  onSessionCreated?: (sessionId: string) => void;
+  onSessionEnded?: () => void;
 }
 
 export function TerminalWindow({
@@ -20,6 +22,8 @@ export function TerminalWindow({
   shell,
   environment,
   onTitleChange,
+  onSessionCreated,
+  onSessionEnded,
 }: TerminalWindowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +42,8 @@ export function TerminalWindow({
         wsUrl={wsUrl}
         shell={shell}
         environment={environment}
+        onSessionCreated={onSessionCreated}
+        onSessionEnded={onSessionEnded}
       />
     </div>
   );

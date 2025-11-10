@@ -13,6 +13,50 @@ export interface ContainerStats {
   blockRead: number; // bytes
   blockWrite: number; // bytes
   pids: number;
+  orphaned?: boolean; // true if container is not tracked in session manager
+}
+
+/**
+ * Terminal session with metadata
+ */
+export interface SessionWithMetadata {
+  sessionId: string;
+  userId: string;
+  environment: string;
+  shell: string;
+  containerName: string;
+  containerId: string;
+  createdAt: number;
+  lastActivity: number;
+  expiresAt: number;
+  clientIp: string | null;
+  connected: boolean;
+  connectedAt: number | null;
+}
+
+/**
+ * Sessions list response
+ */
+export interface SessionsResponse {
+  sessions: SessionWithMetadata[];
+  total: number;
+  connected: number;
+}
+
+/**
+ * Terminate session response
+ */
+export interface TerminateSessionResponse {
+  success: boolean;
+  message: string;
+  sessionId: string;
+  metadata: {
+    sessionId: string;
+    userId: string;
+    clientIp: string;
+    environment: string;
+    containerName: string;
+  };
 }
 
 /**

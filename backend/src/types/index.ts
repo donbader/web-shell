@@ -35,10 +35,12 @@ export interface WebSocketMessage {
 }
 
 export interface WebSocketResponse {
-  type: 'output' | 'session-created' | 'error' | 'pong';
+  type: 'output' | 'session-created' | 'error' | 'pong' | 'termination-notice' | 'session-ended';
   sessionId?: string;
   data?: string;
   error?: string;
+  reason?: string;
+  timestamp?: number;
 }
 
 export interface LoginCredentials {

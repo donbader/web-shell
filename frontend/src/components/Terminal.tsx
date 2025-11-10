@@ -9,13 +9,24 @@ interface TerminalComponentProps {
   wsUrl: string;
   shell?: string;
   environment?: string;
+  onSessionCreated?: (sessionId: string) => void;
+  onSessionEnded?: () => void;
 }
 
-export function TerminalComponent({ wsUrl, shell, environment }: TerminalComponentProps) {
+export function TerminalComponent({ wsUrl, shell, environment, onSessionCreated, onSessionEnded }: TerminalComponentProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsServiceRef = useRef<WebSocketService | null>(null);
+
+  // Use refs for callbacks to avoid recreating WebSocket on callback changes
+  const onSessionCreatedRef = useRef(onSessionCreated);
+  const onSessionEndedRef = useRef(onSessionEnded);
+
+  useEffect(() => {
+    onSessionCreatedRef.current = onSessionCreated;
+    onSessionEndedRef.current = onSessionEnded;
+  }, [onSessionCreated, onSessionEnded]);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -88,14 +99,34 @@ export function TerminalComponent({ wsUrl, shell, environment }: TerminalCompone
 
     wsService.onSessionCreated((sessionId) => {
       console.log('Terminal session created:', sessionId);
+      onSessionCreatedRef.current?.(sessionId);
     });
 
     wsService.onError((error) => {
-      terminal.writeln(`\r\n\x1b[31mError: ${error}\x1b[0m\r\n`);
+      if (error.includes('Session ended') || error.includes('Shell process exited')) {
+        terminal.writeln(`\r\n\x1b[33m${error}\x1b[0m`);
+        terminal.writeln('\x1b[36mClosing terminal window...\x1b[0m\r\n');
+        // Close the terminal window after a brief delay
+        setTimeout(() => {
+          onSessionEndedRef.current?.();
+        }, 1000);
+      } else if (error.includes('terminated')) {
+        terminal.writeln(`\r\n\x1b[31m${error}\x1b[0m`);
+        terminal.writeln('\x1b[36mClosing terminal window...\x1b[0m\r\n');
+        // Close the terminal window after a brief delay
+        setTimeout(() => {
+          onSessionEndedRef.current?.();
+        }, 1000);
+      } else {
+        terminal.writeln(`\r\n\x1b[31mError: ${error}\x1b[0m\r\n`);
+      }
     });
 
     wsService.onClose(() => {
-      terminal.writeln('\r\n\x1b[33mConnection closed. Please refresh the page.\x1b[0m\r\n');
+      // Only show reconnection message if it wasn't an intentional close
+      if (!wsService.getSessionId() || wsService.isConnected()) {
+        terminal.writeln('\r\n\x1b[33mConnection closed.\x1b[0m\r\n');
+      }
     });
 
     // Connect to backend
@@ -153,7 +184,7 @@ export function TerminalComponent({ wsUrl, shell, environment }: TerminalCompone
       wsService.close();
       terminal.dispose();
     };
-  }, [wsUrl, shell, environment]);
+  }, [wsUrl, shell, environment]); // Remove callback dependencies!
 
   return (
     <div
