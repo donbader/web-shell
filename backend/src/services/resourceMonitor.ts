@@ -1,6 +1,7 @@
 import Docker from 'dockerode';
 import logger from '../utils/logger.js';
 import containerManager from './containerManager.js';
+import { Readable } from 'stream';
 
 /**
  * Resource usage statistics for a container
@@ -47,9 +48,24 @@ export interface SystemStats {
   };
 }
 
+/**
+ * Container stats stream handler
+ */
+interface StatsStreamHandler {
+  containerId: string;
+  containerName: string;
+  stream: Readable;
+  latestStats: any;
+  isActive: boolean;
+}
+
 class ResourceMonitor {
   private docker: Docker;
-  private previousStats: Map<string, any> = new Map();
+  private statsStreams: Map<string, StatsStreamHandler> = new Map();
+  private streamCheckInterval: NodeJS.Timeout | null = null;
+  private cachedContainers: { tracked: any[]; orphaned: any[] } | null = null;
+  private lastContainerDiscovery: number = 0;
+  private containerDiscoveryCacheTTL: number = 5000; // Cache for 5 seconds
 
   constructor() {
     // Reuse Docker connection from containerManager
@@ -64,16 +80,112 @@ class ResourceMonitor {
     } else {
       this.docker = new Docker({ socketPath: dockerHost });
     }
+
+    // Start periodic stream health check
+    this.startStreamHealthCheck();
   }
 
   /**
-   * Get resource stats for a specific container
+   * Get containers with caching to reduce Docker API calls
    */
-  private async getContainerStats(containerId: string, containerName: string): Promise<ContainerStats | null> {
+  private async getCachedContainers(): Promise<{ tracked: any[]; orphaned: any[] }> {
+    const now = Date.now();
+
+    // Return cached result if still valid
+    if (this.cachedContainers && (now - this.lastContainerDiscovery) < this.containerDiscoveryCacheTTL) {
+      return this.cachedContainers;
+    }
+
+    // Fetch fresh container list
+    const containers = await containerManager.discoverAllSessionContainers();
+    this.cachedContainers = containers;
+    this.lastContainerDiscovery = now;
+
+    return containers;
+  }
+
+  /**
+   * Start a stats stream for a container
+   */
+  private async startStatsStream(containerId: string, containerName: string): Promise<void> {
+    // Check if stream already exists
+    if (this.statsStreams.has(containerId)) {
+      return;
+    }
+
     try {
       const container = this.docker.getContainer(containerId);
-      const stats = await container.stats({ stream: false });
 
+      // Use stream=true for persistent connection
+      const stream = await container.stats({ stream: true }) as Readable;
+
+      const handler: StatsStreamHandler = {
+        containerId,
+        containerName,
+        stream,
+        latestStats: null,
+        isActive: true,
+      };
+
+      // Listen for stats data
+      stream.on('data', (chunk: Buffer) => {
+        try {
+          const stats = JSON.parse(chunk.toString());
+          handler.latestStats = stats;
+          handler.isActive = true;
+        } catch (error) {
+          logger.debug(`Failed to parse stats for ${containerName}`, { error });
+        }
+      });
+
+      stream.on('error', (error) => {
+        logger.debug(`Stats stream error for ${containerName}`, { error });
+        this.stopStatsStream(containerId);
+      });
+
+      stream.on('end', () => {
+        logger.debug(`Stats stream ended for ${containerName}`);
+        this.stopStatsStream(containerId);
+      });
+
+      this.statsStreams.set(containerId, handler);
+      logger.debug(`Started stats stream for ${containerName}`);
+    } catch (error) {
+      logger.debug(`Failed to start stats stream for ${containerName}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Stop a stats stream for a container
+   */
+  private stopStatsStream(containerId: string): void {
+    const handler = this.statsStreams.get(containerId);
+    if (handler) {
+      try {
+        handler.stream.destroy();
+      } catch (error) {
+        // Ignore errors when destroying stream
+      }
+      this.statsStreams.delete(containerId);
+      logger.debug(`Stopped stats stream for ${handler.containerName}`);
+    }
+  }
+
+  /**
+   * Get stats from a running stream
+   */
+  private getStatsFromStream(containerId: string, containerName: string): ContainerStats | null {
+    const handler = this.statsStreams.get(containerId);
+
+    if (!handler || !handler.latestStats) {
+      return null;
+    }
+
+    const stats = handler.latestStats;
+
+    try {
       // Calculate CPU percentage
       const cpuDelta = stats.cpu_stats.cpu_usage.total_usage -
                        (stats.precpu_stats.cpu_usage?.total_usage || 0);
@@ -125,7 +237,7 @@ class ResourceMonitor {
         pids,
       };
     } catch (error) {
-      logger.debug(`Failed to get stats for container ${containerName}`, {
+      logger.debug(`Failed to process stats for ${containerName}`, {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
@@ -133,39 +245,96 @@ class ResourceMonitor {
   }
 
   /**
-   * Get comprehensive system stats including all containers
+   * Periodic health check to manage streams
+   */
+  private startStreamHealthCheck(): void {
+    if (this.streamCheckInterval) {
+      return;
+    }
+
+    this.streamCheckInterval = setInterval(async () => {
+      try {
+        // Get current containers (this will refresh the cache)
+        const { tracked, orphaned } = await containerManager.discoverAllSessionContainers();
+        this.cachedContainers = { tracked, orphaned };
+        this.lastContainerDiscovery = Date.now();
+
+        const currentContainerIds = new Set([
+          ...tracked.map(t => t.containerId),
+          ...orphaned.map(o => o.containerId),
+          'web-shell-backend',
+          'web-shell-frontend',
+        ]);
+
+        // Stop streams for containers that no longer exist
+        for (const [containerId, handler] of this.statsStreams.entries()) {
+          if (!currentContainerIds.has(containerId)) {
+            logger.debug(`Container ${handler.containerName} no longer exists, stopping stream`);
+            this.stopStatsStream(containerId);
+          }
+        }
+
+        // Start streams for new containers
+        for (const session of tracked) {
+          if (!this.statsStreams.has(session.containerId)) {
+            await this.startStatsStream(session.containerId, session.containerName);
+          }
+        }
+
+        for (const orphan of orphaned) {
+          if (!this.statsStreams.has(orphan.containerId)) {
+            await this.startStatsStream(orphan.containerId, orphan.containerName);
+          }
+        }
+
+        // Ensure backend/frontend streams exist
+        if (!this.statsStreams.has('web-shell-backend')) {
+          await this.startStatsStream('web-shell-backend', 'web-shell-backend');
+        }
+        if (!this.statsStreams.has('web-shell-frontend')) {
+          await this.startStatsStream('web-shell-frontend', 'web-shell-frontend');
+        }
+      } catch (error) {
+        logger.debug('Stream health check failed', { error });
+      }
+    }, 5000); // Check every 5 seconds
+  }
+
+  /**
+   * Get comprehensive system stats using streaming data
    */
   async getSystemStats(): Promise<SystemStats> {
     const timestamp = Date.now();
-    
-    // Discover ALL session containers (both tracked and orphaned)
-    const { tracked, orphaned } = await containerManager.discoverAllSessionContainers();
 
-    // Get stats for all tracked session containers
-    const sessionStatsPromises = tracked.map(session =>
-      this.getContainerStats(session.containerId, session.containerName)
-    );
-    
-    // Get stats for orphaned containers
-    const orphanedStatsPromises = orphaned.map(orphan =>
-      this.getContainerStats(orphan.containerId, orphan.containerName)
-    );
+    // Use cached container discovery (reduces Docker API calls)
+    const { tracked, orphaned } = await this.getCachedContainers();
 
-    const [sessionStatsResults, orphanedStatsResults] = await Promise.all([
-      Promise.all(sessionStatsPromises),
-      Promise.all(orphanedStatsPromises),
-    ]);
+    // Ensure streams exist for all containers
+    const allContainers = [
+      ...tracked.map(t => ({ id: t.containerId, name: t.containerName, orphaned: false })),
+      ...orphaned.map(o => ({ id: o.containerId, name: o.containerName, orphaned: true })),
+    ];
 
-    const sessionStats = sessionStatsResults.filter((s): s is ContainerStats => s !== null);
-    const orphanedStats = orphanedStatsResults.filter((s): s is ContainerStats => s !== null);
+    // Start missing streams (non-blocking)
+    for (const container of allContainers) {
+      if (!this.statsStreams.has(container.id)) {
+        this.startStatsStream(container.id, container.name).catch(() => {
+          // Ignore errors, stream will be retried on next health check
+        });
+      }
+    }
 
-    // Mark orphaned containers in their stats
-    orphanedStats.forEach(stat => {
-      (stat as any).orphaned = true;
-    });
-
-    // Combine all container stats
-    const allContainerStats = [...sessionStats, ...orphanedStats];
+    // Get stats from streams
+    const sessionStats: ContainerStats[] = [];
+    for (const container of allContainers) {
+      const stats = this.getStatsFromStream(container.id, container.name);
+      if (stats) {
+        if (container.orphaned) {
+          (stats as any).orphaned = true;
+        }
+        sessionStats.push(stats);
+      }
+    }
 
     // Get backend stats
     let backendStats = {
@@ -175,19 +344,14 @@ class ResourceMonitor {
       memoryPercent: 0,
     };
 
-    try {
-      const backendContainer = this.docker.getContainer('web-shell-backend');
-      const stats = await this.getContainerStats('web-shell-backend', 'web-shell-backend');
-      if (stats) {
-        backendStats = {
-          cpuPercent: stats.cpuPercent,
-          memoryUsage: stats.memoryUsage,
-          memoryLimit: stats.memoryLimit,
-          memoryPercent: stats.memoryPercent,
-        };
-      }
-    } catch (error) {
-      logger.debug('Could not get backend stats (not running in container or name mismatch)');
+    const backendStatsData = this.getStatsFromStream('web-shell-backend', 'web-shell-backend');
+    if (backendStatsData) {
+      backendStats = {
+        cpuPercent: backendStatsData.cpuPercent,
+        memoryUsage: backendStatsData.memoryUsage,
+        memoryLimit: backendStatsData.memoryLimit,
+        memoryPercent: backendStatsData.memoryPercent,
+      };
     }
 
     // Get frontend stats
@@ -198,32 +362,27 @@ class ResourceMonitor {
       memoryPercent: 0,
     };
 
-    try {
-      const frontendContainer = this.docker.getContainer('web-shell-frontend');
-      const stats = await this.getContainerStats('web-shell-frontend', 'web-shell-frontend');
-      if (stats) {
-        frontendStats = {
-          cpuPercent: stats.cpuPercent,
-          memoryUsage: stats.memoryUsage,
-          memoryLimit: stats.memoryLimit,
-          memoryPercent: stats.memoryPercent,
-        };
-      }
-    } catch (error) {
-      logger.debug('Could not get frontend stats (not running in container or name mismatch)');
+    const frontendStatsData = this.getStatsFromStream('web-shell-frontend', 'web-shell-frontend');
+    if (frontendStatsData) {
+      frontendStats = {
+        cpuPercent: frontendStatsData.cpuPercent,
+        memoryUsage: frontendStatsData.memoryUsage,
+        memoryLimit: frontendStatsData.memoryLimit,
+        memoryPercent: frontendStatsData.memoryPercent,
+      };
     }
 
     // Calculate summary
-    const totalMemoryUsage = allContainerStats.reduce((sum, s) => sum + s.memoryUsage, 0);
-    const totalCpuPercent = allContainerStats.reduce((sum, s) => sum + s.cpuPercent, 0);
-    const activeSessions = allContainerStats.filter(s => s.cpuPercent > 1).length;
-    const idleSessions = allContainerStats.filter(s => s.cpuPercent <= 1).length;
+    const totalMemoryUsage = sessionStats.reduce((sum, s) => sum + s.memoryUsage, 0);
+    const totalCpuPercent = sessionStats.reduce((sum, s) => sum + s.cpuPercent, 0);
+    const activeSessions = sessionStats.filter(s => s.cpuPercent > 1).length;
+    const idleSessions = sessionStats.filter(s => s.cpuPercent <= 1).length;
 
     return {
       timestamp,
       backend: backendStats,
       frontend: frontendStats,
-      sessions: allContainerStats,
+      sessions: sessionStats,
       summary: {
         totalSessions: tracked.length + orphaned.length,
         totalMemoryUsage,
@@ -266,6 +425,7 @@ class ResourceMonitor {
       `Frontend: ${stats.frontend.memoryPercent.toFixed(1)}% RAM (${ResourceMonitor.formatBytes(stats.frontend.memoryUsage)}), ${stats.frontend.cpuPercent.toFixed(1)}% CPU`,
       `Sessions: ${stats.summary.totalSessions} total (${stats.summary.activeSessions} active, ${stats.summary.idleSessions} idle)`,
       `Total Session Resources: ${ResourceMonitor.formatBytes(stats.summary.totalMemoryUsage)} RAM, ${stats.summary.totalCpuPercent.toFixed(1)}% CPU`,
+      `Active Stats Streams: ${this.statsStreams.size}`,
     ];
 
     if (stats.sessions.length > 0) {
@@ -276,6 +436,22 @@ class ResourceMonitor {
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Cleanup all streams on shutdown
+   */
+  shutdown(): void {
+    if (this.streamCheckInterval) {
+      clearInterval(this.streamCheckInterval);
+      this.streamCheckInterval = null;
+    }
+
+    for (const [containerId] of this.statsStreams) {
+      this.stopStatsStream(containerId);
+    }
+
+    logger.info('Resource monitor shutdown complete');
   }
 }
 
