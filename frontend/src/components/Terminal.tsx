@@ -128,10 +128,27 @@ export function TerminalComponent({ wsUrl, shell, environment }: TerminalCompone
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
+    // Handle page visibility change (user switches tabs)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // User switched away from this tab
+        // The backend will automatically cleanup idle sessions after IDLE_TIMEOUT_MINUTES
+        console.log('[Terminal] Tab hidden, session will be cleaned up if idle too long');
+      } else {
+        // User came back to this tab
+        // Ping to show activity
+        if (wsService.isConnected()) {
+          wsService.ping();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(pingInterval);
       wsService.close();
       terminal.dispose();

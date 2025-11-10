@@ -314,6 +314,10 @@ wss.on('connection', (ws: WebSocket, req) => {
         }
 
         case 'ping':
+          // Update activity to prevent idle timeout
+          if (sessionId) {
+            ptyManager.updateActivity(sessionId);
+          }
           ws.send(JSON.stringify({ type: 'pong' } as WebSocketResponse));
           break;
 
