@@ -56,6 +56,8 @@ services:
       - MAX_SESSIONS_PER_USER=${MAX_SESSIONS_PER_USER:-5}
       - IDLE_TIMEOUT_MINUTES=${IDLE_TIMEOUT_MINUTES:-30}
       - DOCKER_HOST=tcp://docker-proxy:2375  # Connect through proxy instead of direct socket
+      # Network for session containers (must match docker-compose network with project prefix)
+      - DOCKER_NETWORK=web-shell_web-shell-network
       # HTTPS/SSL Configuration
       - USE_HTTPS=${USE_HTTPS:-false}
       - SSL_KEY_PATH=${SSL_KEY_PATH:-/app/certs/key.pem}

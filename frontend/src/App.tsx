@@ -93,9 +93,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background">
+    <div className="h-screen w-full flex flex-col bg-background">
       {/* Header - Mobile Responsive */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <div className="container flex h-14 max-w-screen-2xl items-center px-4 sm:px-6">
           <div className="flex items-center gap-2 flex-1">
             <Terminal className="h-5 w-5 text-primary hidden sm:block" />
@@ -121,7 +121,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex flex-col flex-1 overflow-hidden">
         <WindowManager wsUrl={WS_URL} />
       </main>
     </div>

@@ -102,7 +102,7 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
             }
           });
         } catch (error) {
-          console.error(`[WindowManager] Error ensuring image for ${env}:`, error);
+          console.error(`Error ensuring image for ${env}:`, error);
         }
       }
 
@@ -210,9 +210,9 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1">
       {/* Tab Bar - Mobile Responsive */}
-      <div className="flex items-center gap-2 px-2 sm:px-4 py-2 border-b bg-muted/30 overflow-x-auto">
+      <div className="flex items-center gap-2 px-2 sm:px-4 py-2 border-b bg-muted/30 overflow-x-auto flex-shrink-0">
         {/* Tabs Container - Scrollable on mobile */}
         <div className="flex gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-thin">
           {state.windows.map(window => (
@@ -265,7 +265,7 @@ export function WindowManager({ wsUrl }: WindowManagerProps) {
       </div>
 
       {/* Terminal Container */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden min-h-0">
         {imagesReady && state.windows.map(window => (
           <TerminalWindow
             key={window.id}
