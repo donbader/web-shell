@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { WindowManager } from './components/WindowManager';
 import { Login } from './components/Login';
+import { ResourceMonitor } from './components/ResourceMonitor';
 import { getApiUrl, getWebSocketUrl } from './utils/apiUrl';
 import { Button } from '@/components/ui/button';
-import { Terminal, LogOut, Loader2 } from 'lucide-react';
+import { Terminal, LogOut, Loader2, Activity } from 'lucide-react';
 
 const API_URL = getApiUrl();
 const WS_URL = getWebSocketUrl();
@@ -14,6 +15,7 @@ const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeView, setActiveView] = useState<'terminal' | 'resources'>('terminal');
 
   useEffect(() => {
     // Check authentication status on mount
@@ -106,23 +108,50 @@ function App() {
               </p>
             </div>
           </div>
-          {AUTH_ENABLED && (
+
+          <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant={activeView === 'terminal' ? 'default' : 'ghost'}
               size="sm"
-              onClick={handleLogout}
+              onClick={() => setActiveView('terminal')}
               className="gap-2"
             >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <Terminal className="h-4 w-4" />
+              <span className="hidden sm:inline">Terminal</span>
             </Button>
-          )}
+            <Button
+              variant={activeView === 'resources' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('resources')}
+              className="gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Resources</span>
+            </Button>
+            {AUTH_ENABLED && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex flex-col flex-1 overflow-hidden">
-        <WindowManager wsUrl={WS_URL} />
+        {activeView === 'terminal' ? (
+          <WindowManager wsUrl={WS_URL} />
+        ) : (
+          <div className="flex-1 overflow-auto">
+            <ResourceMonitor />
+          </div>
+        )}
       </main>
     </div>
   );

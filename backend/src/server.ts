@@ -13,6 +13,7 @@ import { authMiddleware } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import environmentRoutes from './routes/environments.js';
 import imageRoutes from './routes/images.js';
+import resourceRoutes from './routes/resources.js';
 import {
   initializeDefaultUser,
   verifyToken,
@@ -119,6 +120,9 @@ app.use('/api/environments', environmentRoutes);
 
 // Image management routes (public for checking, can add auth later if needed)
 app.use('/api/images', imageRoutes);
+
+// Resource monitoring routes (public for now, can add auth later)
+app.use('/api/resources', resourceRoutes);
 
 // API routes with auth
 app.get('/api/sessions', authMiddleware, (req, res) => {
