@@ -60,11 +60,11 @@ services:
       # Docker proxy connection
       - DOCKER_HOST=tcp://docker-proxy:2375
       # Network for session containers (must match docker-compose network with project prefix)
-      - DOCKER_NETWORK=web-shell_web-shell-network
+      - DOCKER_NETWORK=web-shell_network
     command: npm run dev
     restart: unless-stopped
     networks:
-      - web-shell-network
+      - network
       - docker-proxy-network  # Connect to proxy network
     depends_on:
       docker-proxy:
@@ -90,12 +90,12 @@ services:
     depends_on:
       - backend
     networks:
-      - web-shell-network
+      - network
     stdin_open: true
     tty: true
 
 networks:
-  web-shell-network:
+  network:
     driver: bridge
   docker-proxy-network:  # Isolated network for Docker proxy access
     driver: bridge

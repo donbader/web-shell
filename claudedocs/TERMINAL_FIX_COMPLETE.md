@@ -10,7 +10,7 @@ Terminal was not displaying in the UI despite backend working correctly. Two sep
 ### Issue 1: Docker Network Configuration (RESOLVED)
 **Problem**: Backend couldn't create terminal containers
 **Root Cause**: `DOCKER_NETWORK` environment variable set to `web-shell-network` but actual network was `web-shell_web-shell-network` (Docker Compose adds project prefix)
-**Fix**: Updated both docker-compose files with correct network name
+**Fix**: Renamed network from `web-shell-network` to `network` in docker-compose files, resulting in cleaner `web-shell_network` name
 
 ### Issue 2: CSS Height Propagation (RESOLVED)
 **Problem**: Terminal area rendered with 0px height, making it invisible
@@ -25,7 +25,20 @@ Terminal was not displaying in the UI despite backend working correctly. Two sep
 - DOCKER_NETWORK=web-shell-network
 
 # After:
-- DOCKER_NETWORK=web-shell_web-shell-network
+- DOCKER_NETWORK=web-shell_network
+```
+
+### 1b. docker-compose.dev.yml (lines 67-68, 93, 98)
+Renamed network from `web-shell-network` to `network`:
+```yaml
+# Network definition (line 98):
+networks:
+  network:
+    driver: bridge
+
+# Network references (lines 67-68, 93):
+networks:
+  - network
 ```
 
 ### 2. docker-compose.yml (line 60)
@@ -33,7 +46,20 @@ Terminal was not displaying in the UI despite backend working correctly. Two sep
 # Before: (missing entirely)
 
 # After:
-- DOCKER_NETWORK=web-shell_web-shell-network
+- DOCKER_NETWORK=web-shell_network
+```
+
+### 2b. docker-compose.yml (lines 74, 110, 128)
+Renamed network from `web-shell-network` to `network`:
+```yaml
+# Network definition (line 128):
+networks:
+  network:
+    driver: bridge
+
+# Network references (lines 74, 110):
+networks:
+  - network
 ```
 
 ### 3. frontend/src/App.tsx (line 95)
