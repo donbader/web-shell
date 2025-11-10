@@ -16,6 +16,7 @@ import {
   getSessions,
   terminateSession,
   terminateOrphanedContainer,
+  getResourceStats,
   formatBytes,
   formatPercent,
   getUsageColor,
