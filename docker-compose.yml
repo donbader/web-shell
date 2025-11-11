@@ -70,6 +70,8 @@ services:
       # SECURITY: Direct Docker socket mount REMOVED - access now through proxy
       # Mount SSL certificates (production)
       # - /etc/ssl/private:/app/certs:ro
+      # Mount SSH configuration from host
+      - ${HOME}/.ssh:/home/node/.ssh:ro
     networks:
       - network
       - docker-proxy-network  # Connect to proxy network

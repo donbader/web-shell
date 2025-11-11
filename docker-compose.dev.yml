@@ -49,6 +49,8 @@ services:
       - backend-node-modules:/app/node_modules
       - ./backend:/build-context:ro  # Build context for dynamic image building
       # SECURITY: Direct Docker socket mount REMOVED - access now through proxy
+      # Mount SSH configuration from host
+      - ${HOME}/.ssh:/home/node/.ssh:ro
     environment:
       - NODE_ENV=development
       - PORT=3366
